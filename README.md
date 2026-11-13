@@ -66,9 +66,13 @@ See `tools/build_offline.py` for the reproducible offline build.
 > `invokeinterface` — and then throws
 > `IncompatibleClassChangeError` the first time the game touches it. That is
 > exactly what broke v1.0.0 (`MutableComponent` was stubbed as an interface;
-> it is a class). `tools/verify_jar.py` therefore checks the built jar against
-> the real 1.21.1 classes before it is shipped: invoke kinds, member linkage,
-> override descriptors, and that no stub leaked into the jar. Run it with:
+> it is a class). The same class of failure has a second form: a field stubbed
+> as an instance field when the real one is `static` (or the reverse) makes
+> `getstatic`/`getfield` disagree with the real `ACC_STATIC` flag, which throws
+> `IncompatibleClassChangeError` too — again only at runtime. `tools/verify_jar.py`
+> therefore checks the built jar against the real 1.21.1 classes before it is
+> shipped: invoke kinds, field staticness, member linkage, override descriptors,
+> and that no stub leaked into the jar. Run it with:
 >
 > ```
 > python tools/verify_jar.py --jar prebuilt/wandering_earth-1.0.1.jar \

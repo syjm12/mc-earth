@@ -22,13 +22,17 @@ Checks
 ------
   1. invoke kind      -- invokevirtual/invokespecial vs invokeinterface must
                          agree with the real class kind   (IncompatibleClassChangeError)
-  2. member linkage   -- every method/field reference must exist on the real
+  2. field staticness -- getstatic/getfield must agree with the real field's
+                         ACC_STATIC flag                (IncompatibleClassChangeError:
+                                                       "Expecting non-static" /
+                                                        "Expecting static")
+  3. member linkage   -- every method/field reference must exist on the real
                          class or one of its supertypes      (NoSuchMethodError /
                                                               NoSuchFieldError)
-  3. override shape   -- a method of ours whose name exists in the real super
+  4. override shape   -- a method of ours whose name exists in the real super
                          chain must have a matching descriptor, else the game
                          never calls it (silent dead code, no exception)
-  4. stub leak        -- the jar must contain no net/minecraft or com/mojang
+  5. stub leak        -- the jar must contain no net/minecraft or com/mojang
                          classes (the stubs must not ship)
 
 Usage
@@ -55,6 +59,7 @@ import sys
 import zipfile
 
 ACC_INTERFACE, ACC_ENUM = 0x0200, 0x4000
+ACC_STATIC = 0x0008
 
 CLASS_RE = re.compile(r"^(\S+) -> (\S+):$")
 MEM_RE = re.compile(r"^\s+(?:-?\d+:-?\d+:)?(\S+) ([^(\s]+)\(([^)]*)\) -> (\S+)$")
@@ -181,6 +186,7 @@ class ClassFile:
         self.ifaces = [struct.unpack(">H", b.read(2))[0] for _ in range(ni)]
         self.b = b
         self.fields = []
+        self.field_flags = {}
         self.methods = []
         self._read_members()
 
@@ -206,8 +212,10 @@ class ClassFile:
 
     def _read_members(self):
         for _ in range(self.u()):
-            self.b.read(2)
-            self.fields.append((self.name(self.u()), self.name(self.u())))
+            facc = struct.unpack(">H", self.b.read(2))[0]
+            fname, fdesc = self.name(self.u()), self.name(self.u())
+            self.fields.append((fname, fdesc))
+            self.field_flags[(fname, fdesc)] = facc
             self.skip_attrs()
         for _ in range(self.u()):
             acc = struct.unpack(">H", self.b.read(2))[0]
@@ -288,6 +296,9 @@ def decode(bc):
 INVOKE = {0xB6: "invokevirtual", 0xB7: "invokespecial",
           0xB8: "invokestatic", 0xB9: "invokeinterface"}
 FIELD_OPS = {0xB2, 0xB3, 0xB4, 0xB5}
+STATIC_FIELD_OPS = {0xB2, 0xB3}
+FIELD_NAMES = {0xB2: "getstatic", 0xB3: "putstatic",
+               0xB4: "getfield", 0xB5: "putfield"}
 
 
 # ---------------------------------------------------------------- world view
@@ -335,14 +346,19 @@ class World:
             self.cache[deobf_dotted] = None
             return None
         cf = ClassFile(raw)
-        entry = {"kind": cf.kind(), "methods": set(), "fields": set(), "supers": []}
+        entry = {"kind": cf.kind(), "methods": set(), "fields": set(), "supers": [],
+                 "field_static": {}}
         if kind == "vanilla":
             mm = self.map.member_map.get(binname, {})
             fm = self.map.field_map.get(binname, {})
             for mname, _md, _code, _acc in cf.methods:
                 entry["methods"].update(mm.get(mname, ()))
-            for fname, _fd in cf.fields:
-                entry["fields"].update(fm.get(fname, ()))
+            for fname, fdesc in cf.fields:
+                decls = fm.get(fname, ())
+                entry["fields"].update(decls)
+                static = bool(cf.field_flags.get((fname, fdesc), 0) & ACC_STATIC)
+                for dn, dd in decls:
+                    entry["field_static"][(dn, dd)] = static
             sup = cf.name(cf.super_i)
             if sup:
                 entry["supers"].append(self.map.obf_to_deobf.get(sup, sup.replace("/", ".")))
@@ -353,6 +369,9 @@ class World:
         else:
             entry["methods"] = {(m[0], m[1]) for m in cf.methods}
             entry["fields"] = {(f[0], f[1]) for f in cf.fields}
+            for fname, fdesc in cf.fields:
+                entry["field_static"][(fname, fdesc)] = bool(
+                    cf.field_flags.get((fname, fdesc), 0) & ACC_STATIC)
             sup = cf.name(cf.super_i)
             if sup:
                 entry["supers"].append(sup.replace("/", "."))
@@ -385,6 +404,13 @@ class World:
                 return cls
         return None
 
+    def is_static(self, deobf_dotted, name, desc):
+        """The real ACC_STATIC flag of a field, or None if we cannot tell."""
+        e = self.entry(deobf_dotted) if deobf_dotted else None
+        if e is None:
+            return None
+        return e["field_static"].get((name, desc))
+
 
 # ---------------------------------------------------------------- the checks
 def main(argv=None):
@@ -415,7 +441,7 @@ def main(argv=None):
                 own[nm[:-6]] = zf.read(nm)
 
     problems = []
-    checked_invokes = checked_members = checked_overrides = 0
+    checked_invokes = checked_members = checked_overrides = checked_fields = 0
 
     print("\nchecking %d mod classes ..." % len(own))
     for rel, raw in sorted(own.items()):
@@ -463,6 +489,15 @@ def main(argv=None):
                     problems.append(("NO_SUCH_" + where[:-1].upper(),
                                      rel, mname, off,
                                      "%s.%s%s" % (owner, ref_name, ref_desc)))
+                elif op in FIELD_OPS:
+                    checked_fields += 1
+                    decl = world.member_owner(owner, ref_name, ref_desc, "fields")
+                    real_static = world.is_static(decl, ref_name, ref_desc)
+                    if real_static is not None and real_static != (op in STATIC_FIELD_OPS):
+                        problems.append(("FIELD_ACCESS", rel, mname, off,
+                                         "%s on %s.%s, real static=%s"
+                                         % (FIELD_NAMES[op], owner, ref_name,
+                                            real_static)))
 
         # --- 3: overrides of real methods must match the real descriptor
         sup_bin = cf.name(cf.super_i)
@@ -486,8 +521,8 @@ def main(argv=None):
         problems.append(("STUB_LEAK", nm, "-", -1,
                          "compile-time stub shipped inside the jar"))
 
-    print("invoke sites: %d | member refs: %d | overrides: %d"
-          % (checked_invokes, checked_members, checked_overrides))
+    print("invoke sites: %d | member refs: %d | fields: %d | overrides: %d"
+          % (checked_invokes, checked_members, checked_fields, checked_overrides))
     print("PROBLEMS: %d" % len(problems))
     for kind, rel, mname, off, detail in problems:
         loc = "%s.%s" % (rel, mname) + ("+%d" % off if off >= 0 else "")
