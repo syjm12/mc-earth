@@ -31,7 +31,7 @@ JAVAC = os.path.join(JDK, "bin", "javac")
 JAR = os.path.join(JDK, "bin", "jar")
 
 MOD_ID = "wandering_earth"
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # ---------------------------------------------------------------------------
 # compile-time-only stub sources
@@ -144,7 +144,9 @@ import net.minecraft.resources.ResourceKey;
 import com.mojang.serialization.DynamicOps;
 import java.util.Optional;
 import java.util.stream.Stream;
-public final class HolderLookup {
+// Real type is an INTERFACE (vanilla jo.class, access 0x0601) — must stay an
+// interface or generated call sites become invokevirtual and die with ICCE.
+public interface HolderLookup {
     public interface RegistryLookup<T> extends HolderGetter<T> {}
     public interface Provider extends net.minecraft.core.HolderGetter.Provider {
         Stream<ResourceKey<?>> listRegistries();
@@ -157,7 +159,8 @@ public final class HolderLookup {
 ''',
     "net/minecraft/core/HolderGetter.java.provider": None,  # placeholder, see below
     "net/minecraft/core/component/DataComponentType.java": '''package net.minecraft.core.component;
-public final class DataComponentType<T> {}
+// Real type is an INTERFACE (vanilla kp.class, access 0x0601).
+public interface DataComponentType<T> {}
 ''',
     "net/minecraft/core/RegistryAccess.java": '''package net.minecraft.core;
 public interface RegistryAccess extends HolderLookup.Provider {}
@@ -220,13 +223,19 @@ public interface Component {
     "net/minecraft/network/chat/MutableComponent.java": '''package net.minecraft.network.chat;
 import net.minecraft.ChatFormatting;
 import java.util.function.UnaryOperator;
-public interface MutableComponent extends Component {
-    MutableComponent append(String s);
-    MutableComponent append(Component c);
-    MutableComponent withStyle(ChatFormatting f);
-    MutableComponent withStyle(ChatFormatting... f);
-    MutableComponent withStyle(UnaryOperator<Style> op);
-    MutableComponent withStyle(Style s);
+// Real type is a CLASS (vanilla xn.class, access 0x0021, extends Object,
+// implements Component). It MUST be a class: Component.translatable(...) returns
+// MutableComponent, and a stub interface makes javac emit invokeinterface for
+// withStyle(...) -> "IncompatibleClassChangeError: Found class ... but interface
+// was expected" at runtime (this was the v1.0.0 crash).
+public class MutableComponent implements Component {
+    public MutableComponent append(String s) { return this; }
+    public MutableComponent append(Component c) { return this; }
+    public MutableComponent withStyle(ChatFormatting f) { return this; }
+    public MutableComponent withStyle(ChatFormatting... f) { return this; }
+    public MutableComponent withStyle(UnaryOperator<Style> op) { return this; }
+    public MutableComponent withStyle(Style s) { return this; }
+    public String getString() { return ""; }
 }
 ''',
     "net/minecraft/network/chat/Style.java": '''package net.minecraft.network.chat;
@@ -325,7 +334,19 @@ public final class ItemStack {
 }
 ''',
     "net/minecraft/world/item/TooltipFlag.java": '''package net.minecraft.world.item;
-public enum TooltipFlag { NORMAL, ADVANCED }
+// Real type is an INTERFACE (vanilla cwm.class, access 0x0601); the concrete
+// implementation is the record TooltipFlag.Default (cwm$a).
+public interface TooltipFlag {
+    boolean isAdvanced();
+    boolean isCreative();
+    class Default implements TooltipFlag {
+        private final boolean advanced;
+        private final boolean creative;
+        public Default(boolean advanced, boolean creative) { this.advanced = advanced; this.creative = creative; }
+        public boolean isAdvanced() { return advanced; }
+        public boolean isCreative() { return creative; }
+    }
+}
 ''',
     "net/minecraft/world/level/ItemLike.java": '''package net.minecraft.world.level;
 import net.minecraft.world.item.Item;

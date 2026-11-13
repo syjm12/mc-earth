@@ -51,8 +51,7 @@ The Gradle wrapper here points at a Tencent mirror for the Gradle distribution.
 On networks where `maven.neoforged.net` is unreachable, a full ModDevGradle build
 cannot run (NeoForm Runtime `net.neoforged:neoform-runtime:2.0.31` is not
 mirrored). This repository therefore also ships an **offline-compiled jar**:
-`prebuilt/wandering_earth-1.0.0.jar` (also emitted to `build/libs/` when the
-offline build runs locally). It was produced by compiling the exact
+`prebuilt/wandering_earth-1.0.1.jar`. It was produced by compiling the exact
 same `src/main/java` sources against the real NeoForge 1.21.1 API jars plus
 compile-time-only `net.minecraft.*` signature stubs (verified against Mojang's
 official 1.21.1 mappings). The stubs are **not** shipped inside the jar — at
@@ -60,6 +59,24 @@ runtime the game supplies the real Minecraft + NeoForge classes. The jar
 contains only this mod's classes and resources and installs like any other mod.
 
 See `tools/build_offline.py` for the reproducible offline build.
+
+> **Why the stubs get verified, not just compiled.** A stub that declares the
+> wrong *kind* of type (an interface as a `class`, or vice versa) compiles
+> perfectly — javac emits `invokevirtual` where the JVM expects
+> `invokeinterface` — and then throws
+> `IncompatibleClassChangeError` the first time the game touches it. That is
+> exactly what broke v1.0.0 (`MutableComponent` was stubbed as an interface;
+> it is a class). `tools/verify_jar.py` therefore checks the built jar against
+> the real 1.21.1 classes before it is shipped: invoke kinds, member linkage,
+> override descriptors, and that no stub leaked into the jar. Run it with:
+>
+> ```
+> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.0.1.jar \
+>     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>
+> ```
+>
+> It reproduces the v1.0.0 crash on the old jar and reports 0 problems on this
+> one.
 
 ## Install
 

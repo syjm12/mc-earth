@@ -5,7 +5,7 @@ issueTrackerURL="https://github.com/"
 
 [[mods]]
 modId="wandering_earth"
-version="1.0.0"
+version="1.0.1"
 displayName="The Wandering Earth"
 authors="Wandering Earth Project"
 description="""Build everything from The Wandering Earth.
