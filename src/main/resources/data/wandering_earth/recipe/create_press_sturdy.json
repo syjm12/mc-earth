@@ -1,0 +1,15 @@
+{
+  "type": "create:pressing",
+  "ingredients": [
+    {
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "results": [
+    {
+      "id": "wandering_earth:sturdy_alloy_ingot",
+      "count": 1
+    }
+  ],
+  "processingTime": 60
+}

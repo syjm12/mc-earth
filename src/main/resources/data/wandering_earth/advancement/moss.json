@@ -1,0 +1,35 @@
+{
+  "parent": "wandering_earth:root",
+  "display": {
+    "icon": {
+      "id": "wandering_earth:moss_mainframe"
+    },
+    "title": {
+      "translate": "advancement.wandering_earth.moss"
+    },
+    "description": {
+      "translate": "advancement.wandering_earth.moss.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "wandering_earth:moss_mainframe"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has"
+    ]
+  ]
+}

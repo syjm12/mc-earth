@@ -1,0 +1,713 @@
+# -*- coding: utf-8 -*-
+"""Offline javac build for The Wandering Earth mod.
+
+On networks where maven.neoforged.net is unreachable, ModDevGradle cannot run
+(NeoForm Runtime is only published there). This script compiles the *exact same*
+src/main/java sources offline:
+
+  real NeoForge / FML .class jars  (from bmclapi mirror, in lab/cp)
+  + compile-time-only net.minecraft.* / com.mojang.* signature stubs (below)
+  -> real compiled .class files -> a clean, installable mod jar.
+
+The stubs are NEVER shipped in the jar. At runtime Minecraft + NeoForge supply
+the real classes. Stubs only exist so javac can resolve method signatures;
+signatures were verified against Mojang's official 1.21.1 mappings.
+
+Usage:  python tools/build_offline.py
+"""
+import os
+import sys
+import shutil
+import subprocess
+
+ROOT = r"D:\money\wandering-earth"
+LAB = r"D:\money\_we_probe\lab"
+CP = os.path.join(LAB, "cp")
+STUB = os.path.join(LAB, "stub")
+OUT = os.path.join(LAB, "classes")
+BUILD = os.path.join(ROOT, "build", "libs")
+JDK = r"D:\Program Files\Java\jdk-21"
+JAVAC = os.path.join(JDK, "bin", "javac")
+JAR = os.path.join(JDK, "bin", "jar")
+
+MOD_ID = "wandering_earth"
+VERSION = "1.0.0"
+
+# ---------------------------------------------------------------------------
+# compile-time-only stub sources
+# ---------------------------------------------------------------------------
+STUBS = {
+    # ---- com.mojang.datafixers (referenced from real NeoForge .class signatures)
+    "com/mojang/datafixers/util/Either.java": '''package com.mojang.datafixers.util;
+public final class Either<L, R> {
+    private Either() {}
+    public static <L, R> Either<L, R> left(L value) { return new Either<>(); }
+    public static <L, R> Either<L, R> right(R value) { return new Either<>(); }
+    public L left() { return null; }
+    public R right() { return null; }
+    public java.util.Optional<L> leftOptional() { return java.util.Optional.empty(); }
+    public java.util.Optional<R> rightOptional() { return java.util.Optional.empty(); }
+    public Object map(java.util.function.Function<L, ?> l, java.util.function.Function<R, ?> r) { return null; }
+}
+''',
+    "com/mojang/datafixers/types/Type.java": '''package com.mojang.datafixers.types;
+public abstract class Type<A> {}
+''',
+    "com/mojang/serialization/DynamicOps.java": '''package com.mojang.serialization;
+public interface DynamicOps<T> {}
+''',
+    # ---- net.minecraft core
+    "net/minecraft/resources/ResourceLocation.java": '''package net.minecraft.resources;
+public final class ResourceLocation {
+    private final String namespace, path;
+    private ResourceLocation(String n, String p) { namespace = n; path = p; }
+    public static ResourceLocation fromNamespaceAndPath(String n, String p) { return new ResourceLocation(n, p); }
+    public static ResourceLocation parse(String s) {
+        int i = s.indexOf(':'); return new ResourceLocation(i < 0 ? "minecraft" : s.substring(0, i), i < 0 ? s : s.substring(i + 1));
+    }
+    public static ResourceLocation tryParse(String s) { return s == null ? null : parse(s); }
+    public String getNamespace() { return namespace; }
+    public String getPath() { return path; }
+    public ResourceLocation withPath(String p) { return new ResourceLocation(namespace, p); }
+    public ResourceLocation withPrefix(String p) { return new ResourceLocation(namespace, p + path); }
+    public String toString() { return namespace + ":" + path; }
+}
+''',
+    "net/minecraft/resources/ResourceKey.java": '''package net.minecraft.resources;
+public final class ResourceKey<T> {
+    private final ResourceLocation loc;
+    private ResourceKey(ResourceLocation l) { loc = l; }
+    public static <T> ResourceKey<T> create(ResourceKey<?> registry, ResourceLocation loc) { return new ResourceKey<>(loc); }
+    public static <T> ResourceKey<T> create(ResourceLocation registry, ResourceLocation loc) { return new ResourceKey<>(loc); }
+    public static <T> ResourceKey<T> createRegistryKey(ResourceLocation loc) { return new ResourceKey<>(loc); }
+    public ResourceLocation location() { return loc; }
+    public ResourceLocation registry() { return loc; }
+    public ResourceKey<?> registryKey() { return this; }
+}
+''',
+    "net/minecraft/core/Registry.java": '''package net.minecraft.core;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
+public interface Registry<T> extends HolderGetter<T>, Iterable<T> {
+    ResourceKey<? extends Registry<T>> key();
+    Optional<Holder.Reference<T>> getHolder(ResourceKey<T> key);
+    Optional<Holder.Reference<T>> getHolder(ResourceLocation loc);
+    Set<ResourceKey<T>> keySet();
+    Stream<Holder.Reference<T>> holders();
+    int getId(T value);
+    ResourceKey<T> getKey(T value);
+    ResourceLocation getKeyLocation(T value);
+    boolean containsKey(ResourceKey<T> key);
+}
+''',
+    "net/minecraft/core/Holder.java": '''package net.minecraft.core;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import com.mojang.datafixers.util.Either;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+public interface Holder<T> {
+    T value();
+    boolean isBound();
+    boolean is(ResourceLocation loc);
+    boolean is(ResourceKey<T> key);
+    boolean is(Predicate<ResourceKey<T>> p);
+    boolean is(TagKey<T> tag);
+    boolean is(Holder<T> holder);
+    Stream<TagKey<T>> tags();
+    Either<ResourceKey<T>, T> unwrap();
+    Optional<ResourceKey<T>> unwrapKey();
+    Kind kind();
+    boolean canSerializeIn(HolderOwner<T> owner);
+    Holder<T> getDelegate();
+    enum Kind { REFERENCE, DIRECT }
+    interface Reference<T> extends Holder<T> {}
+}
+''',
+    "net/minecraft/core/HolderOwner.java": '''package net.minecraft.core;
+public interface HolderOwner<T> {}
+''',
+    "net/minecraft/core/HolderGetter.java": '''package net.minecraft.core;
+import net.minecraft.resources.ResourceKey;
+import java.util.Optional;
+public interface HolderGetter<T> {
+    Optional<Holder.Reference<T>> get(ResourceKey<T> key);
+}
+''',
+    "net/minecraft/core/HolderLookup.java": '''package net.minecraft.core;
+import net.minecraft.resources.ResourceKey;
+import com.mojang.serialization.DynamicOps;
+import java.util.Optional;
+import java.util.stream.Stream;
+public final class HolderLookup {
+    public interface RegistryLookup<T> extends HolderGetter<T> {}
+    public interface Provider extends net.minecraft.core.HolderGetter.Provider {
+        Stream<ResourceKey<?>> listRegistries();
+        <T> Optional<RegistryLookup<T>> lookup(ResourceKey<? extends Registry<T>> key);
+        <T> RegistryLookup<T> lookupOrThrow(ResourceKey<? extends Registry<T>> key);
+        <T> com.mojang.serialization.DynamicOps<T> createSerializationContext(DynamicOps<T> ops);
+        static Provider create(Stream<Provider> p) { return null; }
+    }
+}
+''',
+    "net/minecraft/core/HolderGetter.java.provider": None,  # placeholder, see below
+    "net/minecraft/core/component/DataComponentType.java": '''package net.minecraft.core.component;
+public final class DataComponentType<T> {}
+''',
+    "net/minecraft/core/RegistryAccess.java": '''package net.minecraft.core;
+public interface RegistryAccess extends HolderLookup.Provider {}
+''',
+    "net/minecraft/core/BlockPos.java": '''package net.minecraft.core;
+public final class BlockPos {
+    private final int x, y, z;
+    public BlockPos(int x, int y, int z) { this.x = x; this.y = y; this.z = z; }
+    public int getX() { return x; }
+    public int getY() { return y; }
+    public int getZ() { return z; }
+}
+''',
+    "net/minecraft/core/registries/BuiltInRegistries.java": '''package net.minecraft.core.registries;
+import net.minecraft.core.Registry;
+public final class BuiltInRegistries {
+    public static final Registry<net.minecraft.world.level.block.Block> BLOCK = null;
+    public static final Registry<net.minecraft.world.item.Item> ITEM = null;
+    public static final Registry<net.minecraft.world.level.block.entity.BlockEntityType<?>> BLOCK_ENTITY_TYPE = null;
+    public static final Registry<net.minecraft.world.item.CreativeModeTab> CREATIVE_MODE_TAB = null;
+    public static final Registry<net.minecraft.sounds.SoundEvent> SOUND_EVENT = null;
+}
+''',
+    "net/minecraft/core/registries/Registries.java": '''package net.minecraft.core.registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceLocation;
+public final class Registries {
+    private static <T> ResourceKey<Registry<T>> k(String s) { return ResourceKey.createRegistryKey(ResourceLocation.parse(s)); }
+    public static final ResourceKey<Registry<net.minecraft.world.level.block.Block>> BLOCK = k("minecraft:block");
+    public static final ResourceKey<Registry<net.minecraft.world.item.Item>> ITEM = k("minecraft:item");
+    public static final ResourceKey<Registry<net.minecraft.world.level.block.entity.BlockEntityType<?>>> BLOCK_ENTITY_TYPE = k("minecraft:block_entity_type");
+    public static final ResourceKey<Registry<net.minecraft.world.item.CreativeModeTab>> CREATIVE_MODE_TAB = k("minecraft:creative_mode_tab");
+    public static final ResourceKey<Registry<net.minecraft.sounds.SoundEvent>> SOUND_EVENT = k("minecraft:sound_event");
+    public static final ResourceKey<Registry<net.minecraft.core.component.DataComponentType<?>>> DATA_COMPONENT_TYPE = k("minecraft:data_component_type");
+}
+''',
+    "net/minecraft/tags/TagKey.java": '''package net.minecraft.tags;
+import net.minecraft.resources.ResourceKey;
+public final class TagKey<T> {
+    public ResourceKey<?> registry() { return null; }
+}
+''',
+    "net/minecraft/ChatFormatting.java": '''package net.minecraft;
+public enum ChatFormatting {
+    BLACK, DARK_BLUE, DARK_GREEN, DARK_AQUA, DARK_RED, DARK_PURPLE, GOLD, GRAY,
+    DARK_GRAY, BLUE, GREEN, AQUA, RED, LIGHT_PURPLE, YELLOW, WHITE, OBFUSCATED,
+    BOLD, STRIKETHROUGH, UNDERLINE, ITALIC, RESET
+}
+''',
+    "net/minecraft/network/chat/Component.java": '''package net.minecraft.network.chat;
+public interface Component {
+    static MutableComponent literal(String s) { return null; }
+    static MutableComponent translatable(String s) { return null; }
+    static MutableComponent translatable(String s, Object... args) { return null; }
+    static MutableComponent empty() { return null; }
+    String getString();
+}
+''',
+    "net/minecraft/network/chat/MutableComponent.java": '''package net.minecraft.network.chat;
+import net.minecraft.ChatFormatting;
+import java.util.function.UnaryOperator;
+public interface MutableComponent extends Component {
+    MutableComponent append(String s);
+    MutableComponent append(Component c);
+    MutableComponent withStyle(ChatFormatting f);
+    MutableComponent withStyle(ChatFormatting... f);
+    MutableComponent withStyle(UnaryOperator<Style> op);
+    MutableComponent withStyle(Style s);
+}
+''',
+    "net/minecraft/network/chat/Style.java": '''package net.minecraft.network.chat;
+public final class Style {
+    public static final Style EMPTY = null;
+}
+''',
+    "net/minecraft/sounds/SoundEvent.java": '''package net.minecraft.sounds;
+import net.minecraft.resources.ResourceLocation;
+import java.util.Optional;
+public final class SoundEvent {
+    public static SoundEvent createVariableRangeEvent(ResourceLocation loc) { return null; }
+    public static SoundEvent create(ResourceLocation loc, Optional<Float> range) { return null; }
+}
+''',
+    "net/minecraft/world/level/material/MapColor.java": '''package net.minecraft.world.level.material;
+public final class MapColor {
+    public static final MapColor STONE = null, METAL = null, WOOL = null;
+}
+''',
+    "net/minecraft/world/DyeColor.java": '''package net.minecraft.world;
+public enum DyeColor { WHITE, ORANGE, MAGENTA, LIGHT_BLUE, YELLOW, LIME, PINK, GRAY,
+    LIGHT_GRAY, CYAN, PURPLE, BLUE, BROWN, GREEN, RED, BLACK }
+''',
+    "net/minecraft/world/level/block/SoundType.java": '''package net.minecraft.world.level.block;
+public final class SoundType {
+    public static final SoundType STONE = null, WOOD = null, GRAVEL = null, GRASS = null,
+        METAL = null, GLASS = null, WOOL = null, SAND = null, SNOW = null, LADDER = null,
+        ANVIL = null, SLIME_BLOCK = null, HONEY_BLOCK = null, RESONANT_AMETHYST = null,
+        NETHERITE_BLOCK = null, NETHERRACK = null, NETHER_BRICKS = null, CANDLE = null;
+}
+''',
+    "net/minecraft/world/item/Rarity.java": '''package net.minecraft.world.item;
+public enum Rarity { COMMON, UNCOMMON, RARE, EPIC }
+''',
+    "net/minecraft/world/item/Item.java": '''package net.minecraft.world.item;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ItemLike;
+import java.util.List;
+public class Item implements ItemLike {
+    public Item(Item.Properties p) {}
+    public Item asItem() { return this; }
+    public InteractionResult useOn(UseOnContext ctx) { return InteractionResult.PASS; }
+    public InteractionResultHolder<ItemStack> use(Level l, Player p, InteractionHand h) { return null; }
+    public String getDescriptionId() { return ""; }
+    public String getDescriptionId(ItemStack s) { return ""; }
+    public Component getName(ItemStack s) { return null; }
+    public void appendHoverText(ItemStack s, TooltipContext c, List<Component> t, TooltipFlag f) {}
+    public boolean isFoil(ItemStack s) { return false; }
+    public interface TooltipContext {}
+    public static final class Properties {
+        public Properties() {}
+        public Properties stacksTo(int n) { return this; }
+        public Properties rarity(Rarity r) { return this; }
+        public Properties fireResistant() { return this; }
+        public Properties durability(int n) { return this; }
+        public Properties food(Object f) { return this; }
+    }
+}
+''',
+    "net/minecraft/world/item/BlockItem.java": '''package net.minecraft.world.item;
+import net.minecraft.world.level.block.Block;
+public class BlockItem extends Item {
+    public BlockItem(Block b, Item.Properties p) { super(p); }
+    public Block getBlock() { return null; }
+}
+''',
+    "net/minecraft/world/item/ItemStack.java": '''package net.minecraft.world.item;
+import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.ItemLike;
+import java.util.function.Predicate;
+public final class ItemStack {
+    public static final ItemStack EMPTY = null;
+    public ItemStack(ItemLike i) {}
+    public ItemStack(ItemLike i, int count) {}
+    public ItemStack(Holder<Item> h, int count) {}
+    public Item getItem() { return null; }
+    public boolean isEmpty() { return true; }
+    public int getCount() { return 0; }
+    public void shrink(int n) {}
+    public void grow(int n) {}
+    public ItemStack copy() { return this; }
+    public Component getHoverName() { return null; }
+    public boolean is(Item i) { return false; }
+    public boolean is(TagKey<Item> t) { return false; }
+    public boolean is(Holder<Item> h) { return false; }
+    public boolean is(Predicate<Item> p) { return false; }
+}
+''',
+    "net/minecraft/world/item/TooltipFlag.java": '''package net.minecraft.world.item;
+public enum TooltipFlag { NORMAL, ADVANCED }
+''',
+    "net/minecraft/world/level/ItemLike.java": '''package net.minecraft.world.level;
+import net.minecraft.world.item.Item;
+public interface ItemLike { Item asItem(); }
+''',
+    "net/minecraft/world/level/block/Block.java": '''package net.minecraft.world.level.block;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.phys.BlockHitResult;
+import java.util.List;
+public class Block extends BlockBehaviour implements net.minecraft.world.level.ItemLike {
+    public Block(BlockBehaviour.Properties p) { super(p); }
+    public Item asItem() { return null; }
+    public Block asBlock() { return this; }
+    public void appendHoverText(ItemStack s, Item.TooltipContext c, List<Component> t, TooltipFlag f) {}
+    public BlockState getStateForPlacement(BlockPlaceContext c) { return null; }
+    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> b) {}
+    public void onRemove(BlockState s, Level l, BlockPos p, BlockState ns, boolean moving) {}
+    public void neighborChanged(BlockState s, Level l, BlockPos p, Block b, BlockPos np, boolean moving) {}
+}
+''',
+    "net/minecraft/world/level/block/state/BlockBehaviour.java": '''package net.minecraft.world.level.block.state;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.DyeColor;
+import net.minecraft.world.phys.BlockHitResult;
+import java.util.function.Function;
+import java.util.function.ToIntFunction;
+public abstract class BlockBehaviour {
+    protected BlockBehaviour(Properties p) {}
+    public Properties properties() { return null; }
+    public InteractionResult useWithoutItem(BlockState s, Level l, BlockPos p, Player pl, BlockHitResult h) { return InteractionResult.PASS; }
+    public static final class Properties {
+        private Properties() {}
+        public static Properties of() { return new Properties(); }
+        public static Properties ofFullCopy(BlockBehaviour b) { return of(); }
+        public Properties mapColor(MapColor c) { return this; }
+        public Properties mapColor(DyeColor c) { return this; }
+        public Properties mapColor(Function<BlockState, MapColor> f) { return this; }
+        public Properties noCollission() { return this; }
+        public Properties noOcclusion() { return this; }
+        public Properties sound(SoundType s) { return this; }
+        public Properties lightLevel(ToIntFunction<BlockState> f) { return this; }
+        public Properties strength(float s, float r) { return this; }
+        public Properties strength(float s) { return this; }
+        public Properties requiresCorrectToolForDrops() { return this; }
+        public Properties destroyTime(float t) { return this; }
+        public Properties explosionResistance(float r) { return this; }
+    }
+}
+''',
+    "net/minecraft/world/level/block/state/BlockState.java": '''package net.minecraft.world.level.block.state;
+public final class BlockState {}
+''',
+    "net/minecraft/world/level/block/state/StateDefinition.java": '''package net.minecraft.world.level.block.state;
+import net.minecraft.world.level.block.state.properties.Property;
+public final class StateDefinition<B, S> {
+    public static final class Builder<B, S> {
+        public Builder<B, S> add(Property<?>... p) { return this; }
+    }
+}
+''',
+    "net/minecraft/world/level/block/state/properties/Property.java": '''package net.minecraft.world.level.block.state.properties;
+public abstract class Property<T extends Comparable<T>> {}
+''',
+    "net/minecraft/world/level/block/entity/BlockEntity.java": '''package net.minecraft.world.level.block.entity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+public abstract class BlockEntity {
+    public BlockEntity(BlockEntityType<?> t, BlockPos p, BlockState s) {}
+    public Level getLevel() { return null; }
+    public void setChanged() {}
+    public BlockPos getBlockPos() { return null; }
+    public BlockState getBlockState() { return null; }
+    public void saveAdditional(CompoundTag t, HolderLookup.Provider p) {}
+    public void loadAdditional(CompoundTag t, HolderLookup.Provider p) {}
+    public net.minecraft.network.protocol.Packet getUpdatePacket() { return null; }
+    public CompoundTag getUpdateTag(HolderLookup.Provider p) { return null; }
+}
+''',
+    "net/minecraft/world/level/block/entity/BlockEntityType.java": '''package net.minecraft.world.level.block.entity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import com.mojang.datafixers.types.Type;
+import java.util.Set;
+public final class BlockEntityType<T extends BlockEntity> {
+    public interface BlockEntitySupplier<T extends BlockEntity> { T create(BlockPos p, BlockState s); }
+    public static final class Builder<T extends BlockEntity> {
+        public Builder(BlockEntitySupplier<T> s, Set<Block> b) {}
+        public static <T extends BlockEntity> Builder<T> of(BlockEntitySupplier<T> s, Block... b) { return null; }
+        public BlockEntityType<T> build(Type<?> t) { return null; }
+    }
+}
+''',
+    "net/minecraft/world/level/block/EntityBlock.java": '''package net.minecraft.world.level.block;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.state.BlockState;
+public interface EntityBlock {
+    BlockEntity newBlockEntity(BlockPos p, BlockState s);
+    <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level l, BlockState s, net.minecraft.world.level.block.entity.BlockEntityType<T> t);
+}
+''',
+    "net/minecraft/world/level/block/entity/BlockEntityTicker.java": '''package net.minecraft.world.level.block.entity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+public interface BlockEntityTicker<T extends BlockEntity> {
+    void tick(Level l, BlockPos p, BlockState s, T be);
+}
+''',
+    "net/minecraft/nbt/CompoundTag.java": '''package net.minecraft.nbt;
+public final class CompoundTag {
+    public CompoundTag() {}
+    public void putInt(String k, int v) {}
+    public int getInt(String k) { return 0; }
+    public void putFloat(String k, float v) {}
+    public float getFloat(String k) { return 0; }
+    public void putString(String k, String v) {}
+    public String getString(String k) { return ""; }
+    public void putBoolean(String k, boolean v) {}
+    public boolean getBoolean(String k) { return false; }
+    public boolean contains(String k) { return false; }
+}
+''',
+    "net/minecraft/network/protocol/Packet.java": '''package net.minecraft.network.protocol;
+public interface Packet<T> {}
+''',
+    "net/minecraft/world/level/Level.java": '''package net.minecraft.world.level;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+public abstract class Level {
+    public boolean isClientSide;
+    public boolean isClientSide() { return isClientSide; }
+    public boolean setBlockAndUpdate(BlockPos p, BlockState s) { return true; }
+    public void playSound(Player p, BlockPos pos, SoundEvent s, SoundSource src, float vol, float pitch) {}
+    public BlockEntity getBlockEntity(BlockPos p) { return null; }
+    public BlockState getBlockState(BlockPos p) { return null; }
+    public void updateNeighborsAt(BlockPos p, Block b) {}
+    public long getGameTime() { return 0L; }
+    public ResourceKey<Level> dimension() { return null; }
+}
+''',
+    "net/minecraft/sounds/SoundSource.java": '''package net.minecraft.sounds;
+public enum SoundSource { MASTER, MUSIC, RECORDS, WEATHER, BLOCKS, HOSTILE, NEUTRAL, PLAYERS, AMBIENT, VOICE }
+''',
+    "net/minecraft/world/entity/player/Player.java": '''package net.minecraft.world.entity.player;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+public abstract class Player {
+    public void displayClientMessage(Component c, boolean actionBar) {}
+    public boolean addItem(ItemStack s) { return true; }
+    public Inventory getInventory() { return null; }
+}
+''',
+    "net/minecraft/world/entity/player/Inventory.java": '''package net.minecraft.world.entity.player;
+public final class Inventory {}
+''',
+    "net/minecraft/world/phys/BlockHitResult.java": '''package net.minecraft.world.phys;
+import net.minecraft.core.BlockPos;
+public final class BlockHitResult {
+    public BlockPos getBlockPos() { return null; }
+}
+''',
+    "net/minecraft/world/InteractionResult.java": '''package net.minecraft.world;
+public enum InteractionResult {
+    SUCCESS, SUCCESS_NO_ITEM_USED, CONSUME, CONSUME_PARTIAL, PASS, FAIL;
+    public boolean consumesAction() { return this == SUCCESS || this == CONSUME; }
+    public boolean shouldSwing() { return this == SUCCESS; }
+    public boolean indicateItemUse() { return this == SUCCESS; }
+    public static InteractionResult sidedSuccess(boolean client) { return client ? SUCCESS : SUCCESS; }
+}
+''',
+    "net/minecraft/world/InteractionResultHolder.java": '''package net.minecraft.world;
+public final class InteractionResultHolder<T> {
+    public InteractionResultHolder(InteractionResult r, T o) {}
+    public InteractionResult getResult() { return InteractionResult.PASS; }
+    public T getObject() { return null; }
+}
+''',
+    "net/minecraft/world/InteractionHand.java": '''package net.minecraft.world;
+public enum InteractionHand { MAIN_HAND, OFF_HAND }
+''',
+    "net/minecraft/world/phys/Vec3.java": '''package net.minecraft.world.phys;
+public final class Vec3 {}
+''',
+    "net/minecraft/world/item/context/UseOnContext.java": '''package net.minecraft.world.item.context;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+public class UseOnContext {
+    public UseOnContext(Level l, Player p, InteractionHand h, ItemStack s, BlockHitResult r) {}
+    public BlockPos getClickedPos() { return null; }
+    public ItemStack getItemInHand() { return null; }
+    public Player getPlayer() { return null; }
+    public InteractionHand getHand() { return InteractionHand.MAIN_HAND; }
+    public Level getLevel() { return null; }
+    public BlockHitResult getHitResult() { return null; }
+}
+''',
+    "net/minecraft/world/item/context/BlockPlaceContext.java": '''package net.minecraft.world.item.context;
+public class BlockPlaceContext extends UseOnContext {
+    public BlockPlaceContext(net.minecraft.world.level.Level l, net.minecraft.world.entity.player.Player p,
+        net.minecraft.world.InteractionHand h, net.minecraft.world.item.ItemStack s,
+        net.minecraft.world.phys.BlockHitResult r) { super(l, p, h, s, r); }
+}
+''',
+    "net/minecraft/world/item/CreativeModeTab.java": '''package net.minecraft.world.item;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.item.CreativeModeTab;
+import java.util.Collection;
+import java.util.function.Supplier;
+public final class CreativeModeTab {
+    public enum Row { TOP, BOTTOM }
+    public enum Type { CATEGORY, INVENTORY, HOTBAR, SEARCH }
+    public enum TabVisibility { PARENT_AND_SEARCH_TABS, PARENT_TAB_ONLY, SEARCH_TAB_ONLY }
+    public interface Output {
+        void accept(ItemStack s, TabVisibility v);
+        void accept(ItemStack s);
+        void accept(ItemLike i, TabVisibility v);
+        void accept(ItemLike i);
+        void acceptAll(Collection<ItemStack> c, TabVisibility v);
+        void acceptAll(Collection<ItemStack> c);
+    }
+    public interface DisplayItemsGenerator {
+        void accept(ItemDisplayParameters p, Output o);
+    }
+    public static final class ItemDisplayParameters {}
+    public static final class Builder {
+        public Builder(Row r, int c) {}
+        public Builder title(Component c) { return this; }
+        public Builder icon(Supplier<ItemStack> s) { return this; }
+        public Builder displayItems(DisplayItemsGenerator g) { return this; }
+        public CreativeModeTab build() { return null; }
+    }
+    public static Builder builder(Row r, int c) { return new Builder(r, c); }
+    public Component getDisplayName() { return null; }
+}
+''',
+    "net/minecraft/world/item/CreativeModeTabs.java": '''package net.minecraft.world.item;
+import net.minecraft.resources.ResourceKey;
+public final class CreativeModeTabs {
+    public static final ResourceKey<CreativeModeTab> BUILDING_BLOCKS = null;
+    public static final ResourceKey<CreativeModeTab> COLORED_BLOCKS = null;
+    public static final ResourceKey<CreativeModeTab> NATURAL_BLOCKS = null;
+    public static final ResourceKey<CreativeModeTab> FUNCTIONAL_BLOCKS = null;
+    public static final ResourceKey<CreativeModeTab> REDSTONE_BLOCKS = null;
+    public static final ResourceKey<CreativeModeTab> OP_BLOCKS = null;
+}
+''',
+    "net/minecraft/Util.java": '''package net.minecraft;
+public final class Util {}
+''',
+}
+
+# Fix the HolderGetter.Provider nested interface (declared in HolderLookup)
+EXTRA = {
+    "net/minecraft/core/HolderGetter.java": '''package net.minecraft.core;
+import net.minecraft.resources.ResourceKey;
+import java.util.Optional;
+public interface HolderGetter<T> {
+    Optional<Holder.Reference<T>> get(ResourceKey<T> key);
+    interface Provider {
+        <T> HolderGetter<T> asGetterLookup();
+    }
+}
+''',
+}
+STUBS.update(EXTRA)
+# remove the placeholder entry
+STUBS.pop("net/minecraft/core/HolderGetter.java.provider", None)
+
+
+def write_stubs():
+    os.makedirs(STUB, exist_ok=True)
+    for rel, src in STUBS.items():
+        if src is None:
+            continue
+        p = os.path.join(STUB, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8", newline="\n") as f:
+            f.write(src)
+
+
+def src_files():
+    out = []
+    for base in (os.path.join(ROOT, "src", "main", "java"), STUB):
+        for root, _, files in os.walk(base):
+            for fn in files:
+                if fn.endswith(".java"):
+                    out.append(os.path.join(root, fn))
+    return out
+
+
+def main():
+    write_stubs()
+    jars = [os.path.join(CP, j) for j in os.listdir(CP) if j.endswith(".jar")]
+    cp = ";".join(jars)
+    if os.path.isdir(OUT):
+        shutil.rmtree(OUT)
+    os.makedirs(OUT, exist_ok=True)
+
+    files = src_files()
+    real = [p for p in files if p.startswith(os.path.join(ROOT, "src"))]
+    print("classpath jars:", len(jars))
+    print("stub files:", len([p for p in files if p.startswith(STUB)]))
+    print("real sources:", len(real))
+
+    cmd = [JAVAC, "-J-Duser.language=en", "-J-Duser.country=US",
+           "-J-Dfile.encoding=UTF-8",
+           "-proc:none", "-encoding", "UTF-8", "--release", "21",
+           "-Xmaxerrs", "200", "-cp", cp, "-d", OUT] + files
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode != 0:
+        sys.stdout.write(r.stdout)
+        sys.stderr.write(r.stderr)
+        print("javac FAILED")
+        return r.returncode
+    print("javac OK")
+
+    # Package: compiled mod classes + resources. Stubs are EXCLUDED.
+    os.makedirs(BUILD, exist_ok=True)
+    jar_path = os.path.join(BUILD, "%s-%s.jar" % (MOD_ID, VERSION))
+    if os.path.exists(jar_path):
+        os.remove(jar_path)
+    # jar with -C OUT (all classes incl stubs) then delete stub packages via a
+    # staging dir: copy only com/wanderingearth classes.
+    stage = os.path.join(LAB, "stage")
+    if os.path.isdir(stage):
+        shutil.rmtree(stage)
+    shutil.copytree(os.path.join(OUT, "com", "wanderingearth"),
+                    os.path.join(stage, "com", "wanderingearth"))
+    shutil.copytree(os.path.join(ROOT, "src", "main", "resources"), stage, dirs_exist_ok=True)
+    # manifest
+    mf = os.path.join(LAB, "MANIFEST.MF")
+    with open(mf, "w", encoding="utf-8", newline="\n") as f:
+        f.write("Manifest-Version: 1.0\n"
+                "Implementation-Title: TheWanderingEarth\n"
+                "Implementation-Version: %s\n"
+                "Built-On-Minecraft: 1.21.1\n"
+                "Built-On-NeoForge: 21.1.209\n\n" % VERSION)
+    r2 = subprocess.run([JAR, "cfm", jar_path, mf, "-C", stage, "."],
+                        capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r2.returncode != 0:
+        sys.stderr.write(r2.stderr)
+        print("jar FAILED")
+        return r2.returncode
+    print("jar OK:", jar_path)
+    print("size:", os.path.getsize(jar_path), "bytes")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

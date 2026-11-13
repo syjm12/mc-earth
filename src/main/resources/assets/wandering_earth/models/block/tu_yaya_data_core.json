@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "wandering_earth:block/tu_yaya_data_core"
+  }
+}

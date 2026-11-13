@@ -1,0 +1,85 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+base { archivesName = mod_id }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// Repositories used by a normal (internet-connected) build.
+// ModDevGradle adds maven.neoforged.net itself; the extra mirrors are harmless.
+repositories {
+    mavenCentral()
+    maven { url = 'https://bmclapi2.bangbang93.com/maven/' }
+    maven { url = 'https://maven.createmod.net' }          // Create / Flywheel / Ponder
+    maven { url = 'https://api.modrinth.com/maven' }       // Create Aeronautics runtime jar
+    maven { url = 'https://maven.ryanhcode.dev/releases' } // Aeronautics / Sable / Simulated
+    maven { url = 'https://maven.parchmentmc.org' }
+    maven { url = 'https://maven.blamejared.com' }
+    maven { url = 'https://maven.shedaniel.me' }
+    maven { url = 'https://libraries.minecraft.net' }
+}
+
+dependencies {
+    // Create is only a *theme* dependency here: the mod's own code does not
+    // import Create classes, so this compileOnly reference is optional.
+    // Uncomment on a machine that can resolve it if you want Create on the
+    // compile classpath for future integration work.
+    // compileOnly("com.simibubi.create:create-1.21.1:${create_version}") { transitive = false }
+}
+
+neoForge {
+    version = neoforge_version
+    parchment {
+        minecraftVersion = parchment_minecraft_version
+        mappingsVersion = parchment_mappings_version
+    }
+    runs {
+        client { client() }
+        server { server() }
+        data { data() }
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+    mods {
+        "${mod_id}" { sourceSet sourceSets.main }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.withType(ProcessResources).configureEach {
+    // neoforge.mods.toml / pack.mcmeta are shipped as literal files,
+    // so no property expansion is required.
+}
+
+jar {
+    manifest {
+        attributes([
+            'Specification-Title'     : mod_id,
+            'Specification-Vendor'    : mod_authors,
+            'Specification-Version'   : '1',
+            'Implementation-Title'    : project.name,
+            'Implementation-Version'  : mod_version,
+            'Implementation-Vendor'   : mod_authors,
+            'Built-On-Minecraft'      : minecraft_version,
+            'Built-On-NeoForge'       : neoforge_version
+        ])
+    }
+}
+
+publishing {
+    publications { mavenJava(MavenPublication) { from components.java } }
+    repositories { maven { url = layout.buildDirectory.dir('repo') } }
+}

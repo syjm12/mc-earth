@@ -1,0 +1,15 @@
+{
+  "type": "create:pressing",
+  "ingredients": [
+    {
+      "item": "wandering_earth:heavy_nuclei_dust"
+    }
+  ],
+  "results": [
+    {
+      "id": "wandering_earth:fusion_fuel_rod",
+      "count": 1
+    }
+  ],
+  "processingTime": 80
+}

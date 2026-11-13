@@ -1,0 +1,15 @@
+{
+  "type": "create:crushing",
+  "ingredients": [
+    {
+      "item": "minecraft:deepslate"
+    }
+  ],
+  "results": [
+    {
+      "id": "wandering_earth:heavy_element_sample",
+      "count": 1
+    }
+  ],
+  "processingTime": 200
+}

@@ -1,0 +1,15 @@
+{
+  "type": "create:pressing",
+  "ingredients": [
+    {
+      "item": "minecraft:copper_ingot"
+    }
+  ],
+  "results": [
+    {
+      "id": "wandering_earth:precision_circuit",
+      "count": 1
+    }
+  ],
+  "processingTime": 90
+}

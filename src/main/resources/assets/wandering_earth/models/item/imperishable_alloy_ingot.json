@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wandering_earth:item/imperishable_alloy_ingot"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wandering_earth:item/ma_zhao_id_card"
+  }
+}

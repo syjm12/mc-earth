@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "wandering_earth:block/navigator_station_block"
+    }
+  }
+}

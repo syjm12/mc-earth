@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "wandering_earth:block/jupiter_gravity_indicator"
+  }
+}

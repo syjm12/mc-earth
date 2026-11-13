@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "wandering_earth:block/planetary_engine_casing"
+    }
+  }
+}

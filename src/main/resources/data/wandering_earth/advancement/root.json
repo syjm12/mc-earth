@@ -1,0 +1,35 @@
+{
+  "display": {
+    "icon": {
+      "id": "wandering_earth:planetary_engine_core"
+    },
+    "title": {
+      "translate": "advancement.wandering_earth.root"
+    },
+    "description": {
+      "translate": "advancement.wandering_earth.root.desc"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false,
+    "background": "minecraft:textures/block/deepslate.png"
+  },
+  "criteria": {
+    "inventory": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "wandering_earth:planetary_engine_casing"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "inventory"
+    ]
+  ]
+}

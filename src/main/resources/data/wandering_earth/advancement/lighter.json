@@ -1,0 +1,35 @@
+{
+  "parent": "wandering_earth:root",
+  "display": {
+    "icon": {
+      "id": "wandering_earth:lighter_stone"
+    },
+    "title": {
+      "translate": "advancement.wandering_earth.lighter"
+    },
+    "description": {
+      "translate": "advancement.wandering_earth.lighter.desc"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "wandering_earth:lighter_stone"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has"
+    ]
+  ]
+}

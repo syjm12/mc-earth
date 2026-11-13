@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "wandering_earth:item/fusion_fuel_rod"
+  }
+}

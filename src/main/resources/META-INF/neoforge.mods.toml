@@ -1,0 +1,46 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+issueTrackerURL="https://github.com/"
+
+[[mods]]
+modId="wandering_earth"
+version="1.0.0"
+displayName="The Wandering Earth"
+authors="Wandering Earth Project"
+description="""Build everything from The Wandering Earth.
+Planetary engines, undercities, the space elevator, 550 series / MOSS,
+vehicles, the lunar and Jupiter crises and the Proxima Centauri chart.
+A Create / Create Aeronautics themed content addon for Minecraft 1.21.1."""
+#logoFile="wandering_earth.png"
+displayTest="MATCH_VERSION"
+
+[[dependencies.wandering_earth]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.wandering_earth]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1, 1.22)"
+    ordering="NONE"
+    side="BOTH"
+
+# The mod is designed as a Create / Create Aeronautics addon but runs
+# standalone too (its own recipes use only vanilla ingredients).
+[[dependencies.wandering_earth]]
+    modId="create"
+    type="optional"
+    versionRange="[6.0.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.wandering_earth]]
+    modId="aeronautics"
+    type="optional"
+    versionRange="[1.0.0,)"
+    ordering="AFTER"
+    side="BOTH"

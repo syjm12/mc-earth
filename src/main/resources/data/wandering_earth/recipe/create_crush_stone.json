@@ -1,0 +1,15 @@
+{
+  "type": "create:crushing",
+  "ingredients": [
+    {
+      "item": "minecraft:stone"
+    }
+  ],
+  "results": [
+    {
+      "id": "wandering_earth:heavy_nuclei_dust",
+      "count": 2
+    }
+  ],
+  "processingTime": 150
+}
