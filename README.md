@@ -9,18 +9,18 @@ A **Minecraft 1.21.1 / NeoForge** content mod themed around *The Wandering Earth
 
 ## What's inside
 
-90 blocks + 39 items across eight authentic categories:
+107 blocks + 47 items across eight authentic categories:
 
 | Category | 内容 | Examples |
 |---|---|---|
-| 行星发动机 | engines | Planetary Engine Core / Nozzle / Light Pillar, Heavy Fusion Reactor, Lighter Socket, Ignition Core |
+| 行星发动机 | engines | Planetary Engine Core / Nozzle / Light Pillar, Heavy Fusion Reactor, Lighter Socket, Ignition Core, Lunar Satellite Engine, Sulawesi No.3 Turning Engine |
 | 地下城 | undercity | Blast Door, Capsule Apartment, Hibernation Pod, Lottery Terminal, Artificial Sun Lamp, Beijing-3 sign |
-| 太空电梯 | elevator | Cable (carbon nanotube), Cabin, Counterweight, Ark / Navigator stations, Seed Vault, Wreckage |
-| 载具装备 | vehicles | Heavy Hauler, Drive Ball, Exoskeleton, Robot Dog Benben, UAV, Tower Crane, Lunar Rover, EVA suit |
-| 军事危机 | military | CN171-11 patch, Gatling, Lunar Nuke, Phased-array Detonator, Manual Detonator, Helium Flash Beacon |
-| 天文环境 | cosmos | Jupiter Great Red Spot, Proxima Centauri Chart, Frozen Ground, Ice Crust, Magma Flood |
-| 道具符号 | props | UEG Flag, Vodka Bottle, Lighter Stone, Zhou's Ignition Button, Over-Fifty Roster, MOSS quotes |
-| 550 / MOSS | quantum | 550A / 550C / 550W, MOSS Camera / Red Dot / Mainframe, Digital Life Card, Tu Yaya Data Core |
+| 太空电梯 | elevator | Cable (carbon nanotube), Cabin, Counterweight, Ark / Navigator stations, Seed Vault, Wreckage, Navigator ISS module / control module |
+| 载具装备 | vehicles | Heavy Hauler, Drive Ball, Exoskeleton, Robot Dog Benben, UAV, Tower Crane, Lunar Rover, EVA suit, Lunar Return Capsule |
+| 军事危机 | military | CN171-11 patch, Gatling, Lunar Nuke, Phased-array Detonator, Manual Detonator, Helium Flash Beacon, Lunar Phased Array |
+| 天文环境 | cosmos | Jupiter Great Red Spot, Proxima Centauri Chart, Frozen Ground, Ice Crust, Magma Flood, Lunar Engine Platform |
+| 道具符号 | props | UEG Flag, Vodka Bottle, Lighter Stone, Zhou's Ignition Button, Over-Fifty Roster, MOSS quotes, Ark / Moon-by-Moon terminals, Fire Seed Plan Core, Emergency Plan Display, Jining Police Station |
+| 550 / MOSS | quantum | 550A / 550C / 550W, MOSS Camera / Red Dot / Mainframe, Digital Life Card, Tu Yaya Data Core, Beijing / Tokyo / Dulles root servers, Digital Life Institute ruins |
 
 Every block: blockstate, cube model, loot table, crafting recipe, `en_us` + `zh_cn`
 name, lore tooltip (hover) and an in-world message on right-click. All blocks are
@@ -28,8 +28,8 @@ grouped into 8 creative tabs.
 
 ### Working planetary engines
 
-Ten engine blocks are not decoration — they have real state, a block entity and
-a client-side flame effect:
+Twelve engine blocks are not decoration — they have real state, a block entity
+and a client-side flame effect:
 
 | Feature | How it works |
 |---|---|
@@ -75,7 +75,7 @@ The Gradle wrapper here points at a Tencent mirror for the Gradle distribution.
 On networks where `maven.neoforged.net` is unreachable, a full ModDevGradle build
 cannot run (NeoForm Runtime `net.neoforged:neoform-runtime:2.0.31` is not
 mirrored). This repository therefore also ships an **offline-compiled jar**:
-`prebuilt/wandering_earth-1.2.0.jar`. It was produced by compiling the exact
+`prebuilt/wandering_earth-1.3.0.jar`. It was produced by compiling the exact
 same `src/main/java` sources against the real NeoForge 1.21.1 API jars plus
 compile-time-only `net.minecraft.*` signature stubs (verified against Mojang's
 official 1.21.1 mappings). The stubs are **not** shipped inside the jar — at
@@ -96,7 +96,7 @@ See `tools/build_offline.py` for the reproducible offline build, and
 > override descriptors, and that no stub leaked into the jar. Run it with:
 >
 > ```
-> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.2.0.jar \
+> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.3.0.jar \
 >     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>
 > ```
 >
@@ -145,6 +145,41 @@ Content is based on the films and novella; a few ambiguous items (e.g. the
 "singularity data core", "周罗", exact engine counts) are deliberately generic
 rather than invented as fact. See `docs/LORE.md`. No copyrighted audio or
 original film assets are included — all textures are programmatically generated.
+
+### v1.3.0: the film research pass
+
+1.3.0 is a **fact-checking release**. Every claim in the mod's lore text was
+checked against the Chinese and English Wikipedia articles for the two films
+and re-checked against what the films actually show; the sources are quoted in
+`docs/FILM_LORE.md`, together with a list of the items that are still uncertain
+and how the mod treats them.
+
+What changed:
+
+* **Removed claims the films do not support.** The engine is no longer
+  described as 11 000 m tall (that number is from the novella), and the
+  undercity population is no longer "3.5 billion people" — the films only say
+  that **half of humanity** went underground, mostly chosen by **lottery**.
+* **Added the numbers the films actually use**: 10 000 planetary engines and
+  2 000 turning engines; 3 371 nuclear bombs; 300 astronauts over 50; three
+  root servers (Beijing, Tokyo, Dulles) that had to be back online within half
+  an hour; 30 000 digits of password; 224 hours until the moon hit Earth; 714
+  hours of decryption still needed; the day becoming 60 hours long; the 550A
+  running **900+ generations**; the Fire Seed plan being authorised by MOSS
+  on its own; the only three 550C machines, one of them lost to a Z9 solar
+  storm.
+* **New content for the set pieces that had no block yet**: the three lunar
+  satellite engines, Sulawesi No.3 turning engine, the lunar phased-array
+  bomb rack, the three root servers, the Delhi Digital Life Institute ruins,
+  the Ark and Moon-by-Moon terminals, the Fire Seed core, the Emergency Plan
+  No.3 display, the Navigator ISS module and control module, the Jining police
+  station, the lunar return capsule — plus eight props (Han Zi'ang's vehicle
+  card, the Digital Life permit, the bomb placement chart, the root server
+  key, the plan manual, Li Yiyi's toolbox, the Fire Seed record, Tu Yaya's
+  memory chip).
+* Two more engine blocks (the lunar satellite engine and Sulawesi No.3) are
+  **real machines**, not decoration: they take lighter stones, need a redstone
+  signal and fire a plasma beam like every other engine.
 
 ## License
 

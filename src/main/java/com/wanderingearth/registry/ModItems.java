@@ -66,6 +66,15 @@ public final class ModItems {
         addPure("moss_red_dot_module", "quantum", new Item.Properties());
         addPure("ma_zhao_id_card", "quantum", new Item.Properties());
         addPure("tu_hengyu_glasses", "quantum", new Item.Properties());
+        // ---- v1.3.0: film-accurate additions (see docs/FILM_LORE.md) ---
+        addPure("hanzi_hao_vehicle_card", "vehicles", new Item.Properties());
+        addPure("digital_life_plan_permit", "quantum", new Item.Properties());
+        addPure("moon_nuke_placement_map", "military", new Item.Properties());
+        addPure("root_server_access_key", "quantum", new Item.Properties());
+        addPure("emergency_plan_manual", "props", new Item.Properties());
+        addPure("li_yiyi_toolbox", "vehicles", new Item.Properties());
+        addPure("fire_seed_civilization_record", "props", new Item.Properties());
+        addPure("tu_yaya_memory_chip", "quantum", new Item.Properties());
     }
 
     private static void add(String cat, ItemLike il) {

@@ -112,6 +112,25 @@ public final class ModBlocks {
     public static final DeferredBlock<Block> QUANTUM_SERVER_RACK = reg("quantum_server_rack", "quantum", 0, "", 7.0f, 12.0f, false);
     public static final DeferredBlock<Block> SINGULARITY_DATA_CORE = reg("singularity_data_core", "quantum", 0, "", 7.0f, 12.0f, false);
 
+    // ---- v1.3.0: film-accurate additions (see docs/FILM_LORE.md) -------
+    public static final DeferredBlock<Block> LUNAR_SATELLITE_ENGINE = reg("lunar_satellite_engine", "engines", 15, "", 7.0f, 12.0f, true);
+    public static final DeferredBlock<Block> SULAWESI_TURNING_ENGINE = reg("sulawesi_turning_engine", "engines", 15, "", 7.0f, 12.0f, true);
+    public static final DeferredBlock<Block> MOON_ENGINE_PLATFORM = reg("moon_engine_platform", "engines", 0, "", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> MOON_NUKE_ARRAY = reg("moon_nuke_array", "military", 0, "", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> ROOT_SERVER_BEIJING = reg("root_server_beijing", "quantum", 11, "moss", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> ROOT_SERVER_TOKYO = reg("root_server_tokyo", "quantum", 11, "moss", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> ROOT_SERVER_DULLES = reg("root_server_dulles", "quantum", 11, "moss", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> DELHI_DIGITAL_LIFE_INSTITUTE = reg("delhi_digital_life_institute", "quantum", 0, "", 5.0f, 8.0f, false);
+    public static final DeferredBlock<Block> DIGITAL_LIFE_LAB_RUIN = reg("digital_life_lab_ruin", "quantum", 0, "", 5.0f, 8.0f, false);
+    public static final DeferredBlock<Block> ARK_PLAN_TERMINAL = reg("ark_plan_terminal", "props", 7, "", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> MOON_BY_MOON_TERMINAL = reg("moon_by_moon_terminal", "props", 7, "", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> FIRE_SEED_PLAN_CORE = reg("fire_seed_plan_core", "props", 13, "moss", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> EMERGENCY_PLAN_BOARD = reg("emergency_plan_board", "props", 9, "countdown", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> NAVIGATOR_ISS_MODULE = reg("navigator_iss_module", "elevator", 0, "", 5.0f, 8.0f, false);
+    public static final DeferredBlock<Block> NAVIGATOR_ISS_CONTROL = reg("navigator_iss_control", "elevator", 9, "moss", 5.0f, 8.0f, false);
+    public static final DeferredBlock<Block> JINING_POLICE_STATION = reg("jining_police_station", "props", 0, "", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> MOON_RETURN_CAPSULE = reg("moon_return_capsule", "vehicles", 0, "", 5.0f, 8.0f, false);
+
     private static DeferredBlock<Block> reg(String name, String cat, int light,
                                              String kind, float strength, float resistance,
                                              boolean engine) {
