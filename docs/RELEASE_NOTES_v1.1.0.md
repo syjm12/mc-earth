@@ -4,7 +4,7 @@
 Create Ponder tutorials.** Textures are now 32×32 with layered detail.
 
 Mod jar: `wandering_earth-1.1.0.jar`
-SHA-256: `4ad191921b0dcad92ffb4d4ef6c0f7b1b7051413b9b03b81b2a145d9e32cfbe7`
+SHA-256: `ad457c58ec6f1dff5e59304a57d5bcbb69e97a3a236f2cfe19121348353bf334`
 
 ## What changed since 1.0.1
 

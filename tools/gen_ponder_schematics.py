@@ -96,8 +96,9 @@ def build(size_x, size_z, center_block, props):
 def write_all(out_dir):
     os.makedirs(out_dir, exist_ok=True)
     scenes = {
+        # lit=false: the scene's cycleBlockProperty(LIT) is what lights it.
         "planetary_engine": ("wandering_earth:planetary_engine_core",
-                             {"facing": "south", "lit": "true"}),
+                             {"facing": "south", "lit": "false"}),
         "lighter_socket": ("wandering_earth:lighter_socket",
                            {"facing": "south", "lit": "false"}),
         "moss_mainframe": ("wandering_earth:moss_mainframe", None),
