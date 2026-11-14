@@ -58,54 +58,6 @@ included and activate when Create is installed. In `neoforge.mods.toml`,
 `create` and `aeronautics` are declared as *optional* dependencies so it loads
 both with and without them (thematically it is a Create Aeronautics addon).
 
-## The movie map
-
-`map/流浪地球-电影还原/` is a finished **Minecraft 1.21.1 world save** that a small
-Python generator (`tools/mapgen/`) writes byte for byte — no in-game building, no
-world-edit mods. It contains, on a 192×192 snowfield with the sky buried at
-y = -21:
-
-| Landmark | Where |
-|---|---|
-| **Planetary engine** | (96, ·, 96), 200 blocks tall: stepped plinth, tapered casing, cooling rings, `heavy_fusion_reactor` core, plasma nozzle, `engine_light_pillar` with an `end_rod` beam column to build limit, four ignition stations and a control deck with three `engine_control_panel`s. |
-| **Undercity** | Underneath it at y ≈ -51: **394 capsule apartments** stacked three storeys high along every wall and across four interior housing blocks, habitat shells, hibernation pods, eco-cycle units, ration dispensers, the lottery terminal, a Beijing-3 district sign, artificial sun lamps, UEG flag and emblem, a southern blast-door corridor, and the 550 room with the 550A/550C/550W cabinets, MOSS mainframe, camera, iteration console, digital-life terminal and the singularity core. |
-| **Space elevator** | (152, ·, 96): base legs, rail, carbon-nanotube cable climbing 230 blocks, a cabin with seats part-way up, counterweight, ark station, navigator station and civilization archive, seed vault, Gagarin plaque, four defence turrets and eighteen wreckage pieces. |
-| **Surface life** | Ice road, UEG checkpoint, a six-`heavy_hauler` convoy with drive balls, the CN171-11 trench, a command bunker with Zhou's ignition button and the over-fifty roster, a Jupiter observation post, a lunar rover, a parked thrust engine and equatorial turning engine, three frozen-ground plates, a magma fissure and two ruined engine silhouettes on the horizon. |
-
-Regenerate it (or resize/edit and rebuild) with:
-
-```
-cd tools/mapgen
-python build_map.py
-```
-
-It writes `map/流浪地球-电影还原/` (a `level.dat` + one `region/r.0.0.mca`).
-Drop that folder into `.minecraft/saves/`. The generator uses only the standard
-library — `nbt.py` is a self-contained NBT reader/writer and `anvil.py` writes
-the 1.21.1 Anvil format (DataVersion 3955, 24 sections, packed palette longs,
-sky/block light arrays).
-
-Two more tools come with it:
-
-```
-python verify_map.py     # reads the save back and asserts the landmarks are there
-python render_slices.py  # renders top-down / cross-section PNGs into slices/
-```
-
-`verify_map.py` re-parses the generated region file and asserts **30 landmarks**
-block by block — the engine core, every elevator stage, the blast door, the 550
-room, the control panels, the ignition stations, the capsules, the lunar rover —
-plus that the 12 **block entities** survived the round trip (9 engines + 3
-control panels, without them the machines would load as plain blocks and lose
-their fuel state). A map that "looks right" but is actually misplaced still
-fails. `render_slices.py` draws the world from above and in cross-section,
-which is how the dense undercity housing was tuned.
-
-Scope, stated honestly: this is a **thematic reconstruction at Minecraft scale**,
-not a survey-accurate replica. A 11 000-block engine would be 11 km tall, which
-no save can hold; the engine here is 200 blocks, the elevator 230. Layout, the
-order of the set pieces and the props follow the films; distances do not.
-
 ## Building
 
 Standard ModDevGradle project (Java 21):
@@ -156,6 +108,36 @@ See `tools/build_offline.py` for the reproducible offline build, and
 Drop the jar into `mods/` of a Minecraft **1.21.1** + **NeoForge 21.1.x**
 instance. Create / Create Aeronautics are optional (recommended, for theme and
 the Create recipes).
+
+## The movie map
+
+A hand-generated Minecraft 1.21.1 world that rebuilds the film's four
+pillars — planetary engine, undercity, space elevator, surface life — is
+built by a small Python generator and kept **on this machine only**. It is
+not published on GitHub and is not part of this repository.
+
+Regenerate or edit it locally with the generator in `tools/mapgen/` (pure
+standard library: `nbt.py` is a self-contained NBT reader/writer and
+`anvil.py` writes the 1.21.1 Anvil format — DataVersion 3955, 24 sections,
+packed palette longs, sky/block light arrays):
+
+```
+cd tools/mapgen
+python build_map.py     # writes map/流浪地球-电影还原
+python verify_map.py    # re-reads the save and asserts 30 landmarks + block entities
+python render_slices.py # draws top-down / cross-section PNGs into slices/
+```
+
+It writes `map/流浪地球-电影还原/` (a `level.dat` + one `region/r.0.0.mca`).
+Drop that folder into `.minecraft/saves/`. The engine carries real block
+entities, so it loads as a working machine with its fuel state instead of a
+plain block.
+
+Scope, stated honestly: this is a **thematic reconstruction at Minecraft
+scale**, not a survey-accurate replica. A 11 000-block engine would be 11 km
+tall, which no save can hold; the engine here is 200 blocks, the elevator 230.
+Layout, the order of the set pieces and the props follow the films;
+distances do not.
 
 ## Lore notes
 
