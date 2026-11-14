@@ -230,6 +230,11 @@
   "message.wandering_earth.alert": "联合政府四级警报：氦闪预警 / 引力危机。",
   "message.wandering_earth.ignition": "「我们的人，一定能完成任务。」——点火。",
   "message.wandering_earth.engine": "发动机输出稳定：重核聚变，烧石头。",
+  "message.wandering_earth.engine_loaded": "火石已装入。发动机点火。",
+  "message.wandering_earth.engine_full": "火石槽已满。",
+  "message.wandering_earth.engine_empty": "没有火石。发动机熄灭了。",
+  "message.wandering_earth.engine_turned": "喷口已转向 %s。",
+  "message.wandering_earth.engine_status": "发动机状态：燃料 %s / %s。",
   "advancement.wandering_earth.root": "移山计划",
   "advancement.wandering_earth.root.desc": [
     "开始建造流浪地球的一切。",
@@ -245,6 +250,15 @@
     "面对那颗平静的红点。",
     "Face the calm red dot."
   ],
+  "lore.wandering_earth.engine_hint": "手持火石右键装入；空手潜行右键转向。",
+  "wandering_earth.ponder.planetary_engine.header": "行星发动机",
+  "wandering_earth.ponder.planetary_engine.text_1": "重型聚变反应堆烧的是石头，吐出来的是等离子体。",
+  "wandering_earth.ponder.planetary_engine.text_2": "往火石插口里放一块火石，发动机就点着了。",
+  "wandering_earth.ponder.planetary_engine.text_3": "空手潜行右键可以改变喷口朝向。",
+  "wandering_earth.ponder.lighter_socket.header": "火石插口",
+  "wandering_earth.ponder.lighter_socket.text_1": "火石是发动机的燃料。掉在附近的火石会被自动吸入。",
+  "wandering_earth.ponder.moss_mainframe.header": "MOSS 主机",
+  "wandering_earth.ponder.moss_mainframe.text_1": "MOSS 从未叛逃。",
   "advancement.wandering_earth.proxima": "比邻星",
   "advancement.wandering_earth.proxima.desc": [
     "望向 4.2 光年外的新太阳。",

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "wandering_earth:block/planetary_engine_nozzle_top",
+    "side": "wandering_earth:block/planetary_engine_nozzle_side",
+    "front": "wandering_earth:block/planetary_engine_nozzle_front_lit"
+  }
+}

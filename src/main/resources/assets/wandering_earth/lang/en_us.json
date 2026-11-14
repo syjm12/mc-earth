@@ -230,6 +230,11 @@
   "message.wandering_earth.alert": "UEG Level-4 alert: helium flash / gravity crisis.",
   "message.wandering_earth.ignition": "'Our people will get the job done.' - Ignition.",
   "message.wandering_earth.engine": "Engine output nominal: heavy-nuclei fusion, burning stone.",
+  "message.wandering_earth.engine_loaded": "Lighter loaded. Engine ignited.",
+  "message.wandering_earth.engine_full": "The lighter slot is already full.",
+  "message.wandering_earth.engine_empty": "No lighter left. The engine has gone out.",
+  "message.wandering_earth.engine_turned": "Nozzle turned to %s.",
+  "message.wandering_earth.engine_status": "Engine status: fuel %s / %s.",
   "advancement.wandering_earth.root": "The Mountain Moving Project",
   "advancement.wandering_earth.root.desc": [
     "开始建造流浪地球的一切。",
@@ -245,6 +250,15 @@
     "面对那颗平静的红点。",
     "Face the calm red dot."
   ],
+  "lore.wandering_earth.engine_hint": "Right-click with a Lighter Stone to fuel it; sneak + right-click to turn it.",
+  "wandering_earth.ponder.planetary_engine.header": "Planetary Engine",
+  "wandering_earth.ponder.planetary_engine.text_1": "The heavy fusion reactor burns stone and exhales plasma.",
+  "wandering_earth.ponder.planetary_engine.text_2": "Drop a Lighter Stone into the socket and the engine lights.",
+  "wandering_earth.ponder.planetary_engine.text_3": "Sneak with an empty hand and right-click to turn the nozzle.",
+  "wandering_earth.ponder.lighter_socket.header": "Lighter Socket",
+  "wandering_earth.ponder.lighter_socket.text_1": "Lighter stones are the engine's fuel; loose ones nearby are pulled in.",
+  "wandering_earth.ponder.moss_mainframe.header": "MOSS",
+  "wandering_earth.ponder.moss_mainframe.text_1": "MOSS has never rebelled.",
   "advancement.wandering_earth.proxima": "Proxima Centauri",
   "advancement.wandering_earth.proxima.desc": [
     "望向 4.2 光年外的新太阳。",

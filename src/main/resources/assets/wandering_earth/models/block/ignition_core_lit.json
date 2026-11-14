@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "wandering_earth:block/ignition_core_top",
+    "side": "wandering_earth:block/ignition_core_side",
+    "front": "wandering_earth:block/ignition_core_front_lit"
+  }
+}

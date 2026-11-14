@@ -15,6 +15,8 @@ import java.util.Map;
 public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(WanderingEarth.MOD_ID);
     public static final Map<String, List<ItemLike>> BY_CATEGORY = new LinkedHashMap<>();
+    /** 火石 / Lighter Stone: the fuel item the planetary engines inhale. */
+    public static DeferredItem<Item> LIGHTER_STONE;
 
     static {
         // One BlockItem per block, so every block is obtainable.
@@ -54,7 +56,7 @@ public final class ModItems {
         addPure("jupiter_gas_sample", "cosmos", new Item.Properties());
         addPure("ice_core_sample", "cosmos", new Item.Properties().stacksTo(64));
         addPure("jupiter_ignition_plan", "cosmos", new Item.Properties());
-        addPure("lighter_stone", "props", new Item.Properties());
+        LIGHTER_STONE = addPure("lighter_stone", "props", new Item.Properties());
         addPure("vodka_bottle", "props", new Item.Properties());
         addPure("mountain_moving_blueprint", "props", new Item.Properties());
         addPure("digital_life_card", "quantum", new Item.Properties());
@@ -70,9 +72,10 @@ public final class ModItems {
         BY_CATEGORY.computeIfAbsent(cat, k -> new ArrayList<>()).add(il);
     }
 
-    private static void addPure(String name, String cat, Item.Properties p) {
+    private static DeferredItem<Item> addPure(String name, String cat, Item.Properties p) {
         DeferredItem<Item> it = ITEMS.registerSimpleItem(name, p);
         add(cat, it);
+        return it;
     }
 
     private ModItems() {}

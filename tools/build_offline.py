@@ -23,6 +23,8 @@ import subprocess
 ROOT = r"D:\money\wandering-earth"
 LAB = r"D:\money\_we_probe\lab"
 CP = os.path.join(LAB, "cp")
+# Optional extra compile-only jars (Create's bundled Ponder, for compat/).
+EXTRA_CP = os.path.join(LAB, "cp_extra")
 STUB = os.path.join(LAB, "stub")
 OUT = os.path.join(LAB, "classes")
 BUILD = os.path.join(ROOT, "build", "libs")
@@ -31,7 +33,7 @@ JAVAC = os.path.join(JDK, "bin", "javac")
 JAR = os.path.join(JDK, "bin", "jar")
 
 MOD_ID = "wandering_earth"
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 
 # ---------------------------------------------------------------------------
 # compile-time-only stub sources
@@ -366,22 +368,30 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.util.RandomSource;
 import java.util.List;
 public class Block extends BlockBehaviour implements net.minecraft.world.level.ItemLike {
     public Block(BlockBehaviour.Properties p) { super(p); }
     public Item asItem() { return null; }
     public Block asBlock() { return this; }
+    public BlockState defaultBlockState() { return null; }
     public void appendHoverText(ItemStack s, Item.TooltipContext c, List<Component> t, TooltipFlag f) {}
     public BlockState getStateForPlacement(BlockPlaceContext c) { return null; }
-    public void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> b) {}
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> b) {}
     public void onRemove(BlockState s, Level l, BlockPos p, BlockState ns, boolean moving) {}
     public void neighborChanged(BlockState s, Level l, BlockPos p, Block b, BlockPos np, boolean moving) {}
+    public void animateTick(BlockState s, Level l, BlockPos p, RandomSource r) {}
+    public void popResource(Level l, BlockPos p, ItemStack s) {}
+    protected void registerDefaultState(BlockState s) {}
 }
 ''',
     "net/minecraft/world/level/block/state/BlockBehaviour.java": '''package net.minecraft.world.level.block.state;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -394,6 +404,7 @@ public abstract class BlockBehaviour {
     protected BlockBehaviour(Properties p) {}
     public Properties properties() { return null; }
     public InteractionResult useWithoutItem(BlockState s, Level l, BlockPos p, Player pl, BlockHitResult h) { return InteractionResult.PASS; }
+    public ItemInteractionResult useItemOn(ItemStack st, BlockState s, Level l, BlockPos p, Player pl, InteractionHand hand, BlockHitResult h) { return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION; }
     public static final class Properties {
         private Properties() {}
         public static Properties of() { return new Properties(); }
@@ -413,8 +424,44 @@ public abstract class BlockBehaviour {
     }
 }
 ''',
+    "net/minecraft/world/level/block/state/StateHolder.java": '''package net.minecraft.world.level.block.state;
+import net.minecraft.world.level.block.state.properties.Property;
+import java.util.Collection;
+// Real: obf dte, abstract class, access 0x0421 (client.txt 1.21.1).
+//
+// IMPORTANT - this stub exists to reproduce the *erased* descriptors exactly.
+// javap says:
+//   public <T extends java.lang.Comparable<T>, V extends T> S a(duf<T>, V)
+//     descriptor: (Lduf;Ljava/lang/Comparable;)Ljava/lang/Object;
+// i.e. setValue erases to a method RETURNING java.lang.Object, because S is
+// unbounded on StateHolder. Declaring setValue directly on BlockState with a
+// BlockState return type makes javac emit a descriptor returning BlockState,
+// which no real class has -> NoSuchMethodError at runtime (the verifier caught
+// exactly this). Modelling the real generic hierarchy makes javac emit Object
+// plus a checkcast, which is what vanilla bytecode does too.
+public abstract class StateHolder<O, S> {
+    protected StateHolder(O owner) {}
+    @SuppressWarnings("unchecked")
+    public <T extends Comparable<T>> T getValue(Property<T> p) { return null; }
+    @SuppressWarnings("unchecked")
+    public <T extends Comparable<T>, V extends T> S setValue(Property<T> p, V v) { return (S) this; }
+    public <T extends Comparable<T>> boolean hasProperty(Property<T> p) { return false; }
+    public Collection<Property<?>> getProperties() { return null; }
+}
+''',
     "net/minecraft/world/level/block/state/BlockState.java": '''package net.minecraft.world.level.block.state;
-public final class BlockState {}
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.properties.Property;
+import java.util.Collection;
+import java.util.Map;
+// Real: obf dtc extends dtb$a (BlockStateBase) extends dte (StateHolder<Block, BlockState>).
+public class BlockState extends StateHolder<Block, BlockState> {
+    public BlockState(Block owner) { super(owner); }
+    public Block getBlock() { return null; }
+    public int getLightEmission() { return 0; }
+    public BlockState asState() { return this; }
+    public Map<Property<?>, Comparable<?>> getValues() { return null; }
+}
 ''',
     "net/minecraft/world/level/block/state/StateDefinition.java": '''package net.minecraft.world.level.block.state;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -425,7 +472,58 @@ public final class StateDefinition<B, S> {
 }
 ''',
     "net/minecraft/world/level/block/state/properties/Property.java": '''package net.minecraft.world.level.block.state.properties;
-public abstract class Property<T extends Comparable<T>> {}
+import java.util.Collection;
+// Real obf duf: abstract class (access 0x0421), so a source call must not
+// emit invokeinterface on it.
+public abstract class Property<T extends Comparable<T>> {
+    public String getName() { return ""; }
+    public Collection<T> getPossibleValues() { return null; }
+    public Class<T> getValueClass() { return null; }
+    public java.util.Optional<T> getValue(String name) { return java.util.Optional.empty(); }
+    public String getName(T value) { return ""; }
+}
+''',
+    "net/minecraft/world/level/block/state/properties/BooleanProperty.java": '''package net.minecraft.world.level.block.state.properties;
+import java.util.Collection;
+// Real obf dtt: class (0x0021), superclass Property.
+public class BooleanProperty extends Property<Boolean> {
+    public BooleanProperty(String name) { super(); }
+    public static BooleanProperty create(String name) { return null; }
+}
+''',
+    "net/minecraft/world/level/block/state/properties/EnumProperty.java": '''package net.minecraft.world.level.block.state.properties;
+import java.util.Collection;
+import java.util.function.Predicate;
+// Real obf dua: class (0x0021), superclass Property.
+public class EnumProperty<T extends Enum<T> & net.minecraft.util.StringRepresentable> extends Property<T> {
+    public EnumProperty(String name, Class<T> type, Collection<T> values) { super(); }
+    public static <T extends Enum<T> & net.minecraft.util.StringRepresentable> EnumProperty<T> create(String name, Class<T> type) { return null; }
+    public static <T extends Enum<T> & net.minecraft.util.StringRepresentable> EnumProperty<T> create(String name, Class<T> type, Predicate<T> filter) { return null; }
+}
+''',
+    "net/minecraft/world/level/block/state/properties/DirectionProperty.java": '''package net.minecraft.world.level.block.state.properties;
+import net.minecraft.core.Direction;
+import java.util.Collection;
+// Real obf dtw: class (0x0021), superclass EnumProperty.
+public class DirectionProperty extends EnumProperty<Direction> {
+    public DirectionProperty(String name, Collection<Direction> values) { super(null, null, null); }
+    public static DirectionProperty create(String name) { return null; }
+    public static DirectionProperty create(String name, net.minecraft.core.Direction... values) { return null; }
+    public static DirectionProperty create(String name, Collection<Direction> values) { return null; }
+    public static DirectionProperty create(String name, java.util.function.Predicate<Direction> filter) { return null; }
+}
+''',
+    "net/minecraft/world/level/block/state/BlockStateProperties.java": '''package net.minecraft.world.level.block.state;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
+public class BlockStateProperties {
+    public static final BooleanProperty LIT = null;
+    public static final BooleanProperty POWERED = null;
+    public static final BooleanProperty WATERLOGGED = null;
+    public static final DirectionProperty FACING = null;
+    public static final DirectionProperty HORIZONTAL_FACING = null;
+    public static final DirectionProperty VERTICAL_DIRECTION = null;
+}
 ''',
     "net/minecraft/world/level/block/entity/BlockEntity.java": '''package net.minecraft.world.level.block.entity;
 import net.minecraft.core.BlockPos;
@@ -505,16 +603,33 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
+import java.util.List;
+import java.util.function.Predicate;
 public abstract class Level {
     public boolean isClientSide;
     public boolean isClientSide() { return isClientSide; }
     public boolean setBlockAndUpdate(BlockPos p, BlockState s) { return true; }
+    public boolean setBlock(BlockPos p, BlockState s, int flags) { return true; }
     public void playSound(Player p, BlockPos pos, SoundEvent s, SoundSource src, float vol, float pitch) {}
+    public void playSound(Player p, double x, double y, double z, SoundEvent s, SoundSource src, float vol, float pitch) {}
     public BlockEntity getBlockEntity(BlockPos p) { return null; }
+    public void setBlockEntity(BlockEntity be) {}
+    public void removeBlockEntity(BlockPos p) {}
     public BlockState getBlockState(BlockPos p) { return null; }
     public void updateNeighborsAt(BlockPos p, Block b) {}
+    public void sendBlockUpdated(BlockPos p, BlockState o, BlockState n, int flags) {}
     public long getGameTime() { return 0L; }
     public ResourceKey<Level> dimension() { return null; }
+    public void addParticle(ParticleOptions p, double x, double y, double z, double dx, double dy, double dz) {}
+    public void addParticle(ParticleOptions p, boolean always, double x, double y, double z, double dx, double dy, double dz) {}
+    public void addAlwaysVisibleParticle(ParticleOptions p, double x, double y, double z, double dx, double dy, double dz) {}
+    public void playLocalSound(double x, double y, double z, SoundEvent s, SoundSource src, float vol, float pitch, boolean distanceDelay) {}
+    public RandomSource getRandom() { return null; }
+    public List<Entity> getEntities(Entity except, AABB box, Predicate<? super Entity> filter) { return null; }
 }
 ''',
     "net/minecraft/sounds/SoundSource.java": '''package net.minecraft.sounds;
@@ -527,6 +642,8 @@ public abstract class Player {
     public void displayClientMessage(Component c, boolean actionBar) {}
     public boolean addItem(ItemStack s) { return true; }
     public Inventory getInventory() { return null; }
+    // Real: Entity.isShiftKeyDown -> bW (client.txt 2461), inherited by Player.
+    public boolean isShiftKeyDown() { return false; }
 }
 ''',
     "net/minecraft/world/entity/player/Inventory.java": '''package net.minecraft.world.entity.player;
@@ -558,7 +675,17 @@ public final class InteractionResultHolder<T> {
 public enum InteractionHand { MAIN_HAND, OFF_HAND }
 ''',
     "net/minecraft/world/phys/Vec3.java": '''package net.minecraft.world.phys;
-public final class Vec3 {}
+// Real: obf (Vec3) => class with public final double x/y/z.
+public class Vec3 {
+    public final double x, y, z;
+    public Vec3(double x, double y, double z) { this.x = x; this.y = y; this.z = z; }
+    public Vec3 add(double dx, double dy, double dz) { return this; }
+    public Vec3 add(Vec3 o) { return this; }
+    public Vec3 subtract(double dx, double dy, double dz) { return this; }
+    public Vec3 subtract(Vec3 o) { return this; }
+    public Vec3 scale(double s) { return this; }
+    public double distanceTo(Vec3 o) { return 0; }
+}
 ''',
     "net/minecraft/world/item/context/UseOnContext.java": '''package net.minecraft.world.item.context;
 import net.minecraft.core.BlockPos;
@@ -578,10 +705,27 @@ public class UseOnContext {
 }
 ''',
     "net/minecraft/world/item/context/BlockPlaceContext.java": '''package net.minecraft.world.item.context;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 public class BlockPlaceContext extends UseOnContext {
-    public BlockPlaceContext(net.minecraft.world.level.Level l, net.minecraft.world.entity.player.Player p,
-        net.minecraft.world.InteractionHand h, net.minecraft.world.item.ItemStack s,
-        net.minecraft.world.phys.BlockHitResult r) { super(l, p, h, s, r); }
+    public BlockPlaceContext(Level l, Player p, InteractionHand h, ItemStack s, BlockHitResult r) { super(l, p, h, s, r); }
+    public BlockPlaceContext(UseOnContext c) { super(null, null, null, null, null); }
+    public BlockPlaceContext(Player p, InteractionHand h, ItemStack s, BlockHitResult r) { super(null, null, null, null, null); }
+    public BlockPos getClickedPos() { return null; }
+    public boolean canPlace() { return true; }
+    public boolean replacingClickedOnBlock() { return false; }
+    public Direction getNearestLookingDirection() { return Direction.NORTH; }
+    public Direction getNearestLookingVerticalDirection() { return Direction.UP; }
+    public Direction[] getNearestLookingDirections() { return null; }
+    // Real: UseOnContext.getHorizontalDirection -> g (client.txt 74).
+    public Direction getHorizontalDirection() { return Direction.NORTH; }
+    public Level getLevel() { return null; }
+    public Player getPlayer() { return null; }
 }
 ''',
     "net/minecraft/world/item/CreativeModeTab.java": '''package net.minecraft.world.item;
@@ -631,6 +775,139 @@ public final class CreativeModeTabs {
     "net/minecraft/Util.java": '''package net.minecraft;
 public final class Util {}
 ''',
+    "net/minecraft/util/StringRepresentable.java": '''package net.minecraft.util;
+public interface StringRepresentable {
+    String getSerializedName();
+}
+''',
+    "net/minecraft/core/Direction.java": '''package net.minecraft.core;
+import net.minecraft.util.StringRepresentable;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
+// Real: obf ji, access 0x4031 => enum (extends java.lang.Enum). Method bodies
+// here are inert; only the descriptor/kind matter for offline compilation.
+public enum Direction implements StringRepresentable {
+    DOWN, UP, NORTH, SOUTH, WEST, EAST;
+    public static final Direction[] VALUES = values();
+    public Direction getOpposite() { return this; }
+    public Direction getClockWise() { return this; }
+    public Direction getCounterClockWise() { return this; }
+    public int getStepX() { return 0; }
+    public int getStepY() { return 0; }
+    public int getStepZ() { return 0; }
+    public String getName() { return ""; }
+    public String getSerializedName() { return ""; }
+    public int get3DDataValue() { return 0; }
+    public static Direction byName(String n) { return NORTH; }
+    public static Direction from3DDataValue(int v) { return NORTH; }
+    public static Direction fromYRot(double y) { return NORTH; }
+    public float toYRot() { return 0f; }
+    public static Stream<Direction> stream() { return Stream.empty(); }
+}
+''',
+    "net/minecraft/util/RandomSource.java": '''package net.minecraft.util;
+// Real: obf ayw, access 0x0601 => interface.
+public interface RandomSource {
+    static RandomSource create() { return null; }
+    static RandomSource create(long seed) { return null; }
+    int nextInt();
+    int nextInt(int bound);
+    default int nextIntBetweenInclusive(int a, int b) { return a; }
+    float nextFloat();
+    double nextDouble();
+    boolean nextBoolean();
+}
+''',
+    "net/minecraft/core/particles/ParticleOptions.java": '''package net.minecraft.core.particles;
+// Real: obf lk, access 0x0601 => interface.
+public interface ParticleOptions {
+}
+''',
+    "net/minecraft/core/particles/ParticleType.java": '''package net.minecraft.core.particles;
+public class ParticleType<T extends ParticleOptions> {
+}
+''',
+    "net/minecraft/core/particles/SimpleParticleType.java": '''package net.minecraft.core.particles;
+// Real: obf lq, access 0x0021 => class, superclass ParticleType.
+public class SimpleParticleType extends ParticleType<SimpleParticleType> implements ParticleOptions {
+}
+''',
+    "net/minecraft/core/particles/ParticleTypes.java": '''package net.minecraft.core.particles;
+// Real: obf lm, access 0x0021 => class holding static particle singletons.
+public class ParticleTypes {
+    public static final SimpleParticleType FLAME = null;
+    public static final SimpleParticleType SOUL_FIRE_FLAME = null;
+    public static final SimpleParticleType LARGE_SMOKE = null;
+    public static final SimpleParticleType LAVA = null;
+    public static final SimpleParticleType SMOKE = null;
+    public static final SimpleParticleType WHITE_SMOKE = null;
+    public static final SimpleParticleType CAMPFIRE_COSY_SMOKE = null;
+}
+''',
+    "net/minecraft/world/phys/AABB.java": '''package net.minecraft.world.phys;
+import net.minecraft.core.BlockPos;
+// Real: obf ewx, access 0x0021 => class with public final double fields a..f.
+public class AABB {
+    public final double a, b, c, d, e, f;
+    public AABB(double x1, double y1, double z1, double x2, double y2, double z2) {
+        this.a = x1; this.b = y1; this.c = z1; this.d = x2; this.e = y2; this.f = z2;
+    }
+    public AABB(BlockPos p) { this(0, 0, 0, 1, 1, 1); }
+    public AABB(Vec3 p1, Vec3 p2) { this(0, 0, 0, 1, 1, 1); }
+    public AABB inflate(double v) { return this; }
+    public AABB inflate(double x, double y, double z) { return this; }
+    public AABB expandTowards(double x, double y, double z) { return this; }
+    public AABB contract(double x, double y, double z) { return this; }
+    public AABB move(double x, double y, double z) { return this; }
+    public boolean contains(double x, double y, double z) { return false; }
+    public Vec3 getCenter() { return null; }
+}
+''',
+    "net/minecraft/world/entity/Entity.java": '''package net.minecraft.world.entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+// Real: obf bsr, access 0x0421 => abstract class.
+public abstract class Entity {
+    public void discard() {}
+    public boolean isShiftKeyDown() { return false; }
+    public AABB getBoundingBox() { return null; }
+    public double getX() { return 0; }
+    public double getY() { return 0; }
+    public double getEyeY() { return 0; }
+    public double getZ() { return 0; }
+    public Level level() { return null; }
+}
+''',
+    "net/minecraft/world/entity/item/ItemEntity.java": '''package net.minecraft.world.entity.item;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+// Real: obf cjh, access 0x0021 => class, superclass Entity.
+public class ItemEntity extends Entity {
+    public ItemEntity(Level l, double x, double y, double z, ItemStack s) {}
+    public ItemEntity(Level l, double x, double y, double z, ItemStack s, double dx, double dy, double dz) {}
+    public ItemStack getItem() { return null; }
+    public void setItem(ItemStack s) {}
+}
+''',
+    "net/minecraft/sounds/SoundEvents.java": '''package net.minecraft.sounds;
+// Real: obf avp, access 0x0021 => class of static SoundEvent constants.
+public class SoundEvents {
+    public static final SoundEvent FIRECHARGE_USE = null;
+    public static final SoundEvent BLAZE_BURN = null;
+    public static final SoundEvent BLAZE_SHOOT = null;
+    public static final SoundEvent BLAZE_AMBIENT = null;
+    public static final SoundEvent FIRE_AMBIENT = null;
+    public static final SoundEvent FIRE_EXTINGUISH = null;
+}
+''',
+    "net/minecraft/world/ItemInteractionResult.java": '''package net.minecraft.world;
+// Real: obf bqt, access 0x4031 => enum.
+public enum ItemInteractionResult {
+    SUCCESS, CONSUME, CONSUME_PARTIAL, PASS_TO_DEFAULT_BLOCK_INTERACTION, SKIP_DEFAULT_BLOCK_INTERACTION, FAIL;
+    public boolean consumesAction() { return this == SUCCESS || this == CONSUME; }
+}
+''',
 }
 
 # Fix the HolderGetter.Provider nested interface (declared in HolderLookup)
@@ -672,9 +949,26 @@ def src_files():
     return out
 
 
+def extra_classpath():
+    """Optional compile-only jars: Create's bundled Ponder (for the compat package).
+
+    Kept in a side directory so a missing jar degrades to a clear skip message
+    instead of a confusing 'cannot find symbol net.createmod...'.
+    """
+    out = []
+    for d in (EXTRA_CP,):
+        if not os.path.isdir(d):
+            continue
+        for fn in sorted(os.listdir(d)):
+            if fn.endswith(".jar"):
+                out.append(os.path.join(d, fn))
+    return out
+
+
 def main():
     write_stubs()
     jars = [os.path.join(CP, j) for j in os.listdir(CP) if j.endswith(".jar")]
+    jars += extra_classpath()
     cp = ";".join(jars)
     if os.path.isdir(OUT):
         shutil.rmtree(OUT)

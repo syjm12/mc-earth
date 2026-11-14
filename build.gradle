@@ -25,11 +25,14 @@ repositories {
 }
 
 dependencies {
-    // Create is only a *theme* dependency here: the mod's own code does not
-    // import Create classes, so this compileOnly reference is optional.
-    // Uncomment on a machine that can resolve it if you want Create on the
-    // compile classpath for future integration work.
-    // compileOnly("com.simibubi.create:create-1.21.1:${create_version}") { transitive = false }
+    // Create itself is only a *theme* dependency: no code here imports Create
+    // classes. The one exception is Ponder (hold-W tutorials), which lives in
+    // its own library and is compiled against at compileOnly scope.
+    //
+    // com.wanderingearth.compat.WanderingEarthPonder is the only class that
+    // touches net.createmod.*; it is loaded reflectively and only when Create
+    // is present, so a standalone install never links against it.
+    compileOnly("net.createmod.ponder:ponder-neoforge:${ponder_version}") { transitive = false }
 }
 
 neoForge {

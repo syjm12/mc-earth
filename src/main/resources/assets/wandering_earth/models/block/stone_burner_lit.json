@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "wandering_earth:block/stone_burner_top",
+    "side": "wandering_earth:block/stone_burner_side",
+    "front": "wandering_earth:block/stone_burner_front_lit"
+  }
+}

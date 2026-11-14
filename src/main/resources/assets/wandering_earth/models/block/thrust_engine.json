@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/orientable",
   "textures": {
-    "all": "wandering_earth:block/thrust_engine"
+    "top": "wandering_earth:block/thrust_engine_top",
+    "side": "wandering_earth:block/thrust_engine_side",
+    "front": "wandering_earth:block/thrust_engine_front"
   }
 }

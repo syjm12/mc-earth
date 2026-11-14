@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/orientable",
   "textures": {
-    "all": "wandering_earth:block/lighter_socket"
+    "top": "wandering_earth:block/lighter_socket_top",
+    "side": "wandering_earth:block/lighter_socket_side",
+    "front": "wandering_earth:block/lighter_socket_front"
   }
 }

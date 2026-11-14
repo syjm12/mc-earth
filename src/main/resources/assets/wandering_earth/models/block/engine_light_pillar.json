@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/orientable",
   "textures": {
-    "all": "wandering_earth:block/engine_light_pillar"
+    "top": "wandering_earth:block/engine_light_pillar_top",
+    "side": "wandering_earth:block/engine_light_pillar_side",
+    "front": "wandering_earth:block/engine_light_pillar_front"
   }
 }

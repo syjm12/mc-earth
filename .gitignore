@@ -5,5 +5,3 @@ run/
 .idea/
 out/
 libs/
-__pycache__/
-*.pyc
