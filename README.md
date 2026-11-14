@@ -119,12 +119,13 @@ not published on GitHub and is not part of this repository.
 Regenerate or edit it locally with the generator in `tools/mapgen/` (pure
 standard library: `nbt.py` is a self-contained NBT reader/writer and
 `anvil.py` writes the 1.21.1 Anvil format — DataVersion 3955, 24 sections,
-packed palette longs, sky/block light arrays):
+packed palette longs, sky/block light arrays). The generator is git-ignored
+together with the map, so it stays on this machine:
 
 ```
 cd tools/mapgen
 python build_map.py     # writes map/流浪地球-电影还原
-python verify_map.py    # re-reads the save and asserts 30 landmarks + block entities
+python verify_map.py    # re-reads the save and asserts 47 landmarks + block entities
 python render_slices.py # draws top-down / cross-section PNGs into slices/
 ```
 
@@ -132,6 +133,27 @@ It writes `map/流浪地球-电影还原/` (a `level.dat` + one `region/r.0.0.mc
 Drop that folder into `.minecraft/saves/`. The engine carries real block
 entities, so it loads as a working machine with its fuel state instead of a
 plain block.
+
+### The film scenes
+
+The map also carries the set pieces that only exist in the films, as places
+you can walk to:
+
+| Where | What it is |
+|---|---|
+| `x 20, z 20` | The moon compound: three satellite engines (one still burning, two blown apart), the 4×4 phased nuke array, the Russian return capsule |
+| `x 30, z 140` | Sulawesi engine No.3 — the turning engine that lit Jupiter's atmosphere |
+| `x 34, z 92` (underground) | The Beijing internet root, drowned in the moon's debris, reached from the 550W room by a service corridor |
+| `x 138, z 30` | The Tokyo root server hall |
+| `x 176, z 150` | The Dulles root server hall |
+| `x 96, z 10` | The Delhi Institute for Digital Life, with its blown-out laboratory wing |
+| `x 76, z 140` | The Jining police station — the stolen vehicle card is in the evidence locker |
+| `x 152, z 96, y 169` | The Navigator station's own modules, the control cabin and the Fire Seed core |
+| `x 152, z 62` | The command bunker: the Ark plan terminal, the Moon-by-Moon terminal and the emergency plan board |
+
+Eight chests carry the film's props — the nuke placement map, the emergency
+plan manual, the vehicle card, Li Yiyi's toolbox, the 550-series access key,
+Tu Yaya's memory chip and the Fire Seed civilised-record archive.
 
 Scope, stated honestly: this is a **thematic reconstruction at Minecraft
 scale**, not a survey-accurate replica. A 11 000-block engine would be 11 km
