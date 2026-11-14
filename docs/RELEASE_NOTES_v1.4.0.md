@@ -82,11 +82,11 @@ mod's own classes.
 python tools/build_offline.py
   classpath jars: 11 | stub files: 80 | real sources: 13
   javac OK
-  jar OK: build/libs/wandering_earth-1.4.0.jar (585409 bytes)
+  jar OK: build/libs/wandering_earth-1.4.0.jar (585525 bytes)
 
 python tools/verify_jar.py --jar build/libs/wandering_earth-1.4.0.jar \
     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>
-  invoke sites: 385 | member refs: 441 | fields: 56 | overrides: 19 | phantom types: 0
+  invoke sites: 387 | member refs: 444 | fields: 57 | overrides: 19 | phantom types: 0
   PROBLEMS: 0
 
 python tools/verify_resources.py --jar build/libs/wandering_earth-1.4.0.jar --vanilla client.jar
