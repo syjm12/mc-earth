@@ -85,6 +85,19 @@ library — `nbt.py` is a self-contained NBT reader/writer and `anvil.py` writes
 the 1.21.1 Anvil format (DataVersion 3955, 24 sections, packed palette longs,
 sky/block light arrays).
 
+Two more tools come with it:
+
+```
+python verify_map.py     # reads the save back and asserts the landmarks are there
+python render_slices.py  # renders top-down / cross-section PNGs into slices/
+```
+
+`verify_map.py` re-parses the generated region file and checks the engine core,
+the elevator, the blast door, the 550W room, the control panels and the
+ignition stations block by block — so a map that "looks right" but is actually
+misplaced still fails. `render_slices.py` draws the world from above and in
+cross-section, which is how the dense undercity housing was tuned.
+
 Scope, stated honestly: this is a **thematic reconstruction at Minecraft scale**,
 not a survey-accurate replica. A 11 000-block engine would be 11 km tall, which
 no save can hold; the engine here is 200 blocks, the elevator 230. Layout, the
