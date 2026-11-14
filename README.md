@@ -99,6 +99,18 @@ See `tools/build_offline.py` for the reproducible offline build, and
 > It reproduces the v1.0.0 crash on the old jar and reports 0 problems on this
 > one.
 
+See `tools/verify_resources.py` for the other half: it walks the declared
+resource graph inside the jar — every `blockstates` variant to its model, the
+model `parent` chain, every `textures` reference, and every item named by a loot
+table or recipe — resolving vanilla targets against a real 1.21.1 `client.jar`.
+A mistyped `minecraft:block/oreintable` or a dropped texture is caught there
+instead of showing up in game as a purple model. Point it at the jar the same way:
+
+```
+python tools/verify_resources.py --jar prebuilt/wandering_earth-1.1.0.jar \\
+    --vanilla client.jar
+```
+
 ## Install
 
 Drop the jar into `mods/` of a Minecraft **1.21.1** + **NeoForge 21.1.x**
