@@ -68,9 +68,9 @@ y = -21:
 | Landmark | Where |
 |---|---|
 | **Planetary engine** | (96, ·, 96), 200 blocks tall: stepped plinth, tapered casing, cooling rings, `heavy_fusion_reactor` core, plasma nozzle, `engine_light_pillar` with an `end_rod` beam column to build limit, four ignition stations and a control deck with three `engine_control_panel`s. |
-| **Undercity** | Underneath it at y ≈ -51: habitat hall, three floors of capsule apartments, hibernation pods, eco-cycle units, ration dispensers, the lottery terminal, a Beijing-3 district sign, artificial sun lamps, UEG flag and emblem, a southern blast-door corridor, and the 550W room with the MOSS mainframe and the human-in-the-loop port. |
-| **Space elevator** | (152, ·, 96): base legs, rail, carbon-nanotube cable climbing 230 blocks, a cabin part-way up, counterweight, ark station, seed vault, Gagarin plaque, four defence turrets and eighteen wreckage pieces. |
-| **Surface life** | Ice road, UEG checkpoint, a six-`heavy_hauler` convoy, the CN171-11 trench, a command bunker with Zhou's ignition button and the over-fifty roster, a Jupiter observation post, a magma fissure and two ruined engine silhouettes on the horizon. |
+| **Undercity** | Underneath it at y ≈ -51: **394 capsule apartments** stacked three storeys high along every wall and across four interior housing blocks, habitat shells, hibernation pods, eco-cycle units, ration dispensers, the lottery terminal, a Beijing-3 district sign, artificial sun lamps, UEG flag and emblem, a southern blast-door corridor, and the 550 room with the 550A/550C/550W cabinets, MOSS mainframe, camera, iteration console, digital-life terminal and the singularity core. |
+| **Space elevator** | (152, ·, 96): base legs, rail, carbon-nanotube cable climbing 230 blocks, a cabin with seats part-way up, counterweight, ark station, navigator station and civilization archive, seed vault, Gagarin plaque, four defence turrets and eighteen wreckage pieces. |
+| **Surface life** | Ice road, UEG checkpoint, a six-`heavy_hauler` convoy with drive balls, the CN171-11 trench, a command bunker with Zhou's ignition button and the over-fifty roster, a Jupiter observation post, a lunar rover, a parked thrust engine and equatorial turning engine, three frozen-ground plates, a magma fissure and two ruined engine silhouettes on the horizon. |
 
 Regenerate it (or resize/edit and rebuild) with:
 
@@ -92,11 +92,14 @@ python verify_map.py     # reads the save back and asserts the landmarks are the
 python render_slices.py  # renders top-down / cross-section PNGs into slices/
 ```
 
-`verify_map.py` re-parses the generated region file and checks the engine core,
-the elevator, the blast door, the 550W room, the control panels and the
-ignition stations block by block — so a map that "looks right" but is actually
-misplaced still fails. `render_slices.py` draws the world from above and in
-cross-section, which is how the dense undercity housing was tuned.
+`verify_map.py` re-parses the generated region file and asserts **30 landmarks**
+block by block — the engine core, every elevator stage, the blast door, the 550
+room, the control panels, the ignition stations, the capsules, the lunar rover —
+plus that the 12 **block entities** survived the round trip (9 engines + 3
+control panels, without them the machines would load as plain blocks and lose
+their fuel state). A map that "looks right" but is actually misplaced still
+fails. `render_slices.py` draws the world from above and in cross-section,
+which is how the dense undercity housing was tuned.
 
 Scope, stated honestly: this is a **thematic reconstruction at Minecraft scale**,
 not a survey-accurate replica. A 11 000-block engine would be 11 km tall, which
