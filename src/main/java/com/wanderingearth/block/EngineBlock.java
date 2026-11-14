@@ -45,9 +45,11 @@ import java.util.List;
  *   <li><b>Fires on redstone.</b> A loaded engine only ignites while it receives
  *       a neighbour signal (or a signal pushed by a {@link ControlPanelBlock}),
  *       and goes out the moment the signal drops.</li>
- *   <li><b>Spouts a beam.</b> While {@link #LIT} the client emits a plasma beam
- *       of {@code END_ROD} / {@code ELECTRIC_SPARK} particles out of the facing
- *       side, up to 12 blocks or until it hits something solid.</li>
+ *   <li><b>Spouts a beacon beam.</b> While {@link #LIT} the block entity renderer
+ *       draws a straight, steady shaft of light out of the facing side, up to
+ *       {@link #BEAM_LENGTH} blocks or until it hits something solid. The shaft is
+ *       rendered with the vanilla beacon beam shader, so it reads like a beacon
+ *       rather than a trail of particles.</li>
  * </ul>
  *
  * <p>Signatures follow the official 1.21.1 Mojang mappings
@@ -62,7 +64,7 @@ public class EngineBlock extends Block implements EntityBlock {
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
     /** How far the plasma beam reaches before it is cut short by a solid block. */
-    public static final int BEAM_LENGTH = 12;
+    public static final int BEAM_LENGTH = 32;
 
     private final String name;
     private final String kind;
@@ -199,7 +201,8 @@ public class EngineBlock extends Block implements EntityBlock {
     }
 
     // ------------------------------------------------------------------
-    // Beam particles (client side, called by the level each tick)
+    // Nozzle glow (client side). The beam shaft itself is drawn by
+    // EngineBeamRenderer, so it stays perfectly straight.
     // ------------------------------------------------------------------
 
     @Override
@@ -221,32 +224,9 @@ public class EngineBlock extends Block implements EntityBlock {
                     facing.getStepX() * 0.02, 0.02, facing.getStepZ() * 0.02);
         }
 
-        // The beam itself: march along the facing axis until something solid.
-        int reach = BEAM_LENGTH;
-        for (int step = 1; step <= BEAM_LENGTH; step++) {
-            BlockPos probe = pos.relative(facing, step);
-            if (!level.getBlockState(probe).isAir()) {
-                reach = step - 1;
-                break;
-            }
-        }
-        if (reach <= 0) {
-            return;
-        }
-        for (int step = 1; step <= reach; step++) {
-            double along = step + 0.5;
-            // Wobble grows with distance so the column reads as a beam, not a ruler.
-            double wobble = 0.02 + (double) step / reach * 0.06;
-            double x = pos.getX() + 0.5 + facing.getStepX() * along + (random.nextDouble() - 0.5) * wobble;
-            double y = pos.getY() + 0.45 + (random.nextDouble() - 0.5) * wobble;
-            double z = pos.getZ() + 0.5 + facing.getStepZ() * along + (random.nextDouble() - 0.5) * wobble;
-            level.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
-            if (random.nextInt(3) == 0) {
-                level.addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z, 0.0, 0.0, 0.0);
-            }
-        }
+        // Beacon hum while the shaft is lit.
         if (random.nextInt(8) == 0) {
-            level.playLocalSound(ox, oy, oz, SoundEvents.BLAZE_SHOOT, SoundSource.BLOCKS, 0.22f, 0.7f, false);
+            level.playLocalSound(ox, oy, oz, SoundEvents.BEACON_AMBIENT, SoundSource.BLOCKS, 0.18f, 1.4f, false);
         }
     }
 
@@ -256,5 +236,7 @@ public class EngineBlock extends Block implements EntityBlock {
                 .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("lore." + WanderingEarth.MOD_ID + ".engine_hint")
                 .withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.add(Component.translatable("lore." + WanderingEarth.MOD_ID + ".engine_beam")
+                .withStyle(ChatFormatting.AQUA));
     }
 }

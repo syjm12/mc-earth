@@ -36,7 +36,7 @@ and a client-side flame effect:
 | **Turns** | `facing` property (4 directions). Place it and it faces you; **sneak + empty-hand right-click** rotates the nozzle a quarter turn, and the blockstate/model follows (per-facing `y` rotation). |
 | **Burns fuel** | A `BlockEntity` (`ModEngineBlockEntity`) stores fuel in NBT (`Fuel` / `BurnTimer`). One lighter stone burns for **400 ticks (20 s)**; while burning it keeps `lit=true`, which swaps in the brighter `_front_lit` model. When fuel runs out the engine extinguishes itself. |
 | **Needs redstone** | Loading a lighter is not enough: the engine only fires while it receives a **redstone signal** (direct neighbour signal, or a remote link pushed by a Control Panel). Without a signal it sits loaded and cold, which is what makes the panels worth building. |
-| **Fires a beam** | `Block.animateTick` sprays `ParticleTypes.END_ROD` (plus every third step `ELECTRIC_SPARK`) out of the nozzle along `facing`, probing up to `BEAM_LENGTH = 12` blocks and stopping at the first solid block. The muzzle also emits `SMALL_FLAME`, with a `BLAZE_SHOOT` report. |
+| **Fires a beacon beam** | A **block entity renderer** (`EngineBeamRenderer`) draws one straight, steady shaft of light out of the nozzle along `facing`, up to `BEAM_LENGTH = 32` blocks and stopping at the first solid block. It uses the vanilla **beacon beam** shader (`RenderType.beaconBeam` + `textures/entity/beacon_beam.png`), so it reads like a lighthouse: a bright core plus a soft halo. The muzzle still emits `SMALL_FLAME` and hums with `BEACON_AMBIENT`. |
 | **Loads lighter stones itself** | Right-click with a **Lighter Stone** to insert one. Separately, every second the engine scans a 3-block box for dropped `ItemEntity` lighter stones and pulls them in automatically. |
 | **Control Panel** | `engine_control_panel` is a machine block with its own `BlockEntity`. It scans a **8 / 16 / 32 block radius** for engines (sneak + right-click cycles the radius), remembers up to 256 of them in NBT, and pushes its own redstone state to all of them — so one lever fires a whole engine farm. |
 | **Ponder** | With Create installed, `com.wanderingearth.compat.WanderingEarthPonder` registers three Create **Ponder** scenes (hold **W** over the item to open the animated explanation). It is loaded reflectively, so the mod still works, with zero `net.createmod.*` references, when Create is absent. |
@@ -75,7 +75,7 @@ The Gradle wrapper here points at a Tencent mirror for the Gradle distribution.
 On networks where `maven.neoforged.net` is unreachable, a full ModDevGradle build
 cannot run (NeoForm Runtime `net.neoforged:neoform-runtime:2.0.31` is not
 mirrored). This repository therefore also ships an **offline-compiled jar**:
-`prebuilt/wandering_earth-1.3.0.jar`. It was produced by compiling the exact
+`prebuilt/wandering_earth-1.4.0.jar`. It was produced by compiling the exact
 same `src/main/java` sources against the real NeoForge 1.21.1 API jars plus
 compile-time-only `net.minecraft.*` signature stubs (verified against Mojang's
 official 1.21.1 mappings). The stubs are **not** shipped inside the jar — at
@@ -96,7 +96,7 @@ See `tools/build_offline.py` for the reproducible offline build, and
 > override descriptors, and that no stub leaked into the jar. Run it with:
 >
 > ```
-> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.3.0.jar \
+> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.4.0.jar \
 >     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>
 > ```
 >
@@ -202,6 +202,44 @@ What changed:
 * Two more engine blocks (the lunar satellite engine and Sulawesi No.3) are
   **real machines**, not decoration: they take lighter stones, need a redstone
   signal and fire a plasma beam like every other engine.
+
+### v1.4.0: the beacon beam
+
+1.4.0 replaces the engine's particle trail with a **real beacon beam**.
+
+The old beam was a trail of `END_ROD` particles emitted from `Block.animateTick`.
+That hook is called by the client on **random** blocks only, so the trail
+flickered and never stood still — it looked like sparks, not like a beam.
+
+What changed:
+
+* **A block entity renderer draws the shaft.** `EngineBeamRenderer` implements
+  `BlockEntityRenderer` and is registered on the **mod** event bus through
+  `EntityRenderersEvent.RegisterRenderers` (that event is a mod bus event, so
+  it cannot be posted to the game bus).
+* **It uses the vanilla beacon shader.** The shaft is drawn with
+  `RenderType.beaconBeam(textures/entity/beacon_beam.png, ...)` — the exact
+  render type and texture vanilla uses for beacons — as a bright core plus a
+  translucent halo, so it blends into the world like a lighthouse.
+* **It is frame perfect.** Because the geometry is built every frame instead of
+  being sprayed as particles, the beam is perfectly straight and never
+  flickers.
+* **It reaches further.** `BEAM_LENGTH` went from 12 to **32** blocks.
+* The muzzle still spits `SMALL_FLAME` and now hums with `BEACON_AMBIENT`
+  instead of `BLAZE_SHOOT`.
+
+To keep the offline build honest, `tools/build_offline.py` gained
+compile-time stubs for the seven client classes this needs (`PoseStack`,
+`VertexConsumer`, `RenderType`, `MultiBufferSource`, `OverlayTexture`,
+`BlockEntityRenderer`, `BlockEntityRendererProvider`), each carrying the
+official 1.21.1 signature including return types, so the compiled descriptors
+match the real classes exactly. The real `org.joml` jar is used for
+`Quaternionf`. `tools/verify_jar.py` checks the result:
+
+```
+invoke sites: 385 | member refs: 441 | fields: 56 | overrides: 19 | phantom types: 0
+PROBLEMS: 0
+```
 
 ## License
 

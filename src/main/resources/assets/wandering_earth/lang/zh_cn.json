@@ -207,6 +207,7 @@
   "lore.wandering_earth.elevator_wreckage": "太空电梯系统的构件。",
   "lore.wandering_earth.emergency_plan_board": "标着「三号紧急预案」的预案板。计划启动时，人类只剩不到两周。",
   "lore.wandering_earth.emergency_plan_manual": "UEG 启动的第三套预案。它要求把人类全部三千三百七十一枚核弹铺在月球表面。",
+  "lore.wandering_earth.engine_beam": "引擎点火后，喷口会射出一道笔直的信标光柱，最远 32 格。",
   "lore.wandering_earth.engine_control_panel": "联合政府工程处控制台。它会登记扫描半径内的每一台行星发动机，用同一路红石信号统一驱动。",
   "lore.wandering_earth.engine_hint": "手持火石右键装填；接通红石信号才会喷出光柱；空手潜行右键转向。",
   "lore.wandering_earth.engine_light_pillar": "等离子光柱。2075 年，三台发动机的喷射流够不到木星大气，差五千多公里。",

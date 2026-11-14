@@ -33,7 +33,7 @@ JAVAC = os.path.join(JDK, "bin", "javac")
 JAR = os.path.join(JDK, "bin", "jar")
 
 MOD_ID = "wandering_earth"
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 # ---------------------------------------------------------------------------
 # compile-time-only stub sources
@@ -942,6 +942,11 @@ public class SoundEvents {
     public static final SoundEvent BLAZE_AMBIENT = null;
     public static final SoundEvent FIRE_AMBIENT = null;
     public static final SoundEvent FIRE_EXTINGUISH = null;
+    // Real: SoundEvents.BEACON_ACTIVATE -> bK, BEACON_AMBIENT -> bL (client.txt).
+    public static final SoundEvent BEACON_ACTIVATE = null;
+    public static final SoundEvent BEACON_AMBIENT = null;
+    public static final SoundEvent BEACON_DEACTIVATE = null;
+    public static final SoundEvent BEACON_POWER_SELECT = null;
 }
 ''',
     "net/minecraft/world/ItemInteractionResult.java": '''package net.minecraft.world;
@@ -949,6 +954,85 @@ public class SoundEvents {
 public enum ItemInteractionResult {
     SUCCESS, CONSUME, CONSUME_PARTIAL, PASS_TO_DEFAULT_BLOCK_INTERACTION, SKIP_DEFAULT_BLOCK_INTERACTION, FAIL;
     public boolean consumesAction() { return this == SUCCESS || this == CONSUME; }
+}
+''',
+    # --- Client side stubs, added in 1.4.0 for the beacon style engine beam. ---
+    # Signatures are copied verbatim from the official Mojang mappings so that the
+    # compiled descriptors match the real classes at runtime.
+    "com/mojang/blaze3d/vertex/PoseStack.java": '''package com.mojang.blaze3d.vertex;
+// Real: obf fbi, access 0x0021 => class.
+public class PoseStack {
+    public PoseStack() {}
+    public void translate(double x, double y, double z) {}
+    public void translate(float x, float y, float z) {}
+    public void scale(float x, float y, float z) {}
+    public void pushPose() {}
+    public void popPose() {}
+    public void setIdentity() {}
+    public Pose last() { return new Pose(); }
+    public static class Pose {
+    }
+}
+''',
+    "com/mojang/blaze3d/vertex/VertexConsumer.java": '''package com.mojang.blaze3d.vertex;
+// Real: obf fbm, access 0x0201 => interface.
+public interface VertexConsumer {
+    VertexConsumer addVertex(float x, float y, float z);
+    VertexConsumer addVertex(PoseStack.Pose pose, float x, float y, float z);
+    VertexConsumer setColor(int red, int green, int blue, int alpha);
+    VertexConsumer setColor(int argb);
+    VertexConsumer setUv(float u, float v);
+    VertexConsumer setLight(int light);
+    VertexConsumer setOverlay(int overlay);
+    VertexConsumer setNormal(float x, float y, float z);
+}
+''',
+    "net/minecraft/client/renderer/RenderType.java": '''package net.minecraft.client.renderer;
+import net.minecraft.resources.ResourceLocation;
+// Real: obf gfh, access 0x0421 => abstract class; beaconBeam -> e.
+public abstract class RenderType {
+    public static RenderType beaconBeam(ResourceLocation texture, boolean outline) { return null; }
+}
+''',
+    "net/minecraft/client/renderer/MultiBufferSource.java": '''package net.minecraft.client.renderer;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+// Real: obf gez, access 0x0201 => interface.
+public interface MultiBufferSource {
+    VertexConsumer getBuffer(RenderType type);
+}
+''',
+    "net/minecraft/client/renderer/texture/OverlayTexture.java": '''package net.minecraft.client.renderer.texture;
+// Real: obf gqc, access 0x0021 => class; NO_OVERLAY -> d.
+// The value is boxed on purpose so that javac emits a getstatic instead of
+// inlining a constant: the real overlay id is computed by the game.
+public class OverlayTexture {
+    public static final int SIZE = 16;
+    public static final int NO_WHITE_U = 0;
+    public static final int RED_OVERLAY_V = 3;
+    public static final int WHITE_OVERLAY_V = 10;
+    public static final int NO_OVERLAY = Integer.valueOf(0);
+}
+''',
+    "net/minecraft/client/renderer/blockentity/BlockEntityRenderer.java": '''package net.minecraft.client.renderer.blockentity;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.Vec3;
+// Real: obf ggz, access 0x0201 => interface.
+public interface BlockEntityRenderer<T extends BlockEntity> {
+    void render(T blockEntity, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay);
+    default boolean shouldRenderOffScreen(T blockEntity) { return false; }
+    default int getViewDistance() { return 64; }
+    default boolean shouldRender(T blockEntity, Vec3 camera) { return true; }
+}
+''',
+    "net/minecraft/client/renderer/blockentity/BlockEntityRendererProvider.java": '''package net.minecraft.client.renderer.blockentity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+// Real: obf gha, access 0x0201 => interface; create -> create.
+public interface BlockEntityRendererProvider<T extends BlockEntity> {
+    BlockEntityRenderer create(Context context);
+    class Context {
+    }
 }
 ''',
 }

@@ -207,6 +207,7 @@
   "lore.wandering_earth.elevator_wreckage": "A component of the space elevator.",
   "lore.wandering_earth.emergency_plan_board": "The board marked Emergency Plan No.3. When the plan started, humanity had less than two weeks.",
   "lore.wandering_earth.emergency_plan_manual": "The UEG's third plan: lay every one of humanity's 3,371 nuclear bombs across the surface of the moon.",
+  "lore.wandering_earth.engine_beam": "Once lit, the nozzle shoots a straight beacon beam, up to 32 blocks.",
   "lore.wandering_earth.engine_control_panel": "A UEG control console. It registers every engine inside its scan radius and drives them all from one redstone line.",
   "lore.wandering_earth.engine_hint": "Right-click with a lighter stone to load it. It only fires while powered by redstone. Sneak-right-click with an empty hand to turn the nozzle.",
   "lore.wandering_earth.engine_light_pillar": "A plasma column. In 2075 three engines fired, but their jets fell five thousand kilometres short of Jupiter.",
