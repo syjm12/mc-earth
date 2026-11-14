@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "wandering_earth:block/engine_control_panel",
+    "side": "wandering_earth:block/engine_control_panel",
+    "front": "wandering_earth:block/engine_control_panel_front_on"
+  }
+}

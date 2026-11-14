@@ -1,0 +1,36 @@
+{
+  "variants": {
+    "facing=north,powered=false": {
+      "model": "wandering_earth:block/engine_control_panel",
+      "y": 0
+    },
+    "facing=north,powered=true": {
+      "model": "wandering_earth:block/engine_control_panel_on",
+      "y": 0
+    },
+    "facing=east,powered=false": {
+      "model": "wandering_earth:block/engine_control_panel",
+      "y": 90
+    },
+    "facing=east,powered=true": {
+      "model": "wandering_earth:block/engine_control_panel_on",
+      "y": 90
+    },
+    "facing=south,powered=false": {
+      "model": "wandering_earth:block/engine_control_panel",
+      "y": 180
+    },
+    "facing=south,powered=true": {
+      "model": "wandering_earth:block/engine_control_panel_on",
+      "y": 180
+    },
+    "facing=west,powered=false": {
+      "model": "wandering_earth:block/engine_control_panel",
+      "y": 270
+    },
+    "facing=west,powered=true": {
+      "model": "wandering_earth:block/engine_control_panel_on",
+      "y": 270
+    }
+  }
+}

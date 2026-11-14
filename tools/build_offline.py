@@ -33,7 +33,7 @@ JAVAC = os.path.join(JDK, "bin", "javac")
 JAR = os.path.join(JDK, "bin", "jar")
 
 MOD_ID = "wandering_earth"
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 # ---------------------------------------------------------------------------
 # compile-time-only stub sources
@@ -174,6 +174,21 @@ public final class BlockPos {
     public int getX() { return x; }
     public int getY() { return y; }
     public int getZ() { return z; }
+    // Real 1.21.1: asLong()/asLong(int,int,int) pack into 38 bits, of(long) unpacks.
+    public long asLong() { return asLong(x, y, z); }
+    public static long asLong(int x, int y, int z) { return 0L; }
+    public static BlockPos of(long packed) { return new BlockPos(0, 0, 0); }
+    public static int getX(long packed) { return 0; }
+    public static int getY(long packed) { return 0; }
+    public static int getZ(long packed) { return 0; }
+    public BlockPos above() { return new BlockPos(x, y + 1, z); }
+    public BlockPos above(int n) { return new BlockPos(x, y + n, z); }
+    public BlockPos below() { return new BlockPos(x, y - 1, z); }
+    public BlockPos below(int n) { return new BlockPos(x, y - n, z); }
+    public BlockPos relative(Direction d) { return this; }
+    public BlockPos relative(Direction d, int n) { return this; }
+    public BlockPos offset(int dx, int dy, int dz) { return new BlockPos(x + dx, y + dy, z + dz); }
+    public BlockPos offset(int x, int y, int z, int n) { return new BlockPos(this.x + x * n, this.y + y * n, this.z + z * n); }
 }
 ''',
     "net/minecraft/core/registries/BuiltInRegistries.java": '''package net.minecraft.core.registries;
@@ -380,6 +395,8 @@ public class Block extends BlockBehaviour implements net.minecraft.world.level.I
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> b) {}
     public void onRemove(BlockState s, Level l, BlockPos p, BlockState ns, boolean moving) {}
     public void neighborChanged(BlockState s, Level l, BlockPos p, Block b, BlockPos np, boolean moving) {}
+    // Real: BlockBehaviour.onPlace -> b (client.txt 178), inherited by Block.
+    public void onPlace(BlockState s, Level l, BlockPos p, BlockState oldState, boolean moving) {}
     public void animateTick(BlockState s, Level l, BlockPos p, RandomSource r) {}
     public void popResource(Level l, BlockPos p, ItemStack s) {}
     protected void registerDefaultState(BlockState s) {}
@@ -461,6 +478,10 @@ public class BlockState extends StateHolder<Block, BlockState> {
     public int getLightEmission() { return 0; }
     public BlockState asState() { return this; }
     public Map<Property<?>, Comparable<?>> getValues() { return null; }
+    // Real: these live on BlockStateBase (obf dtb$a), inherited by BlockState.
+    public boolean isAir() { return false; }
+    public boolean isSolid() { return true; }
+    public boolean canBeReplaced() { return false; }
 }
 ''',
     "net/minecraft/world/level/block/state/StateDefinition.java": '''package net.minecraft.world.level.block.state;
@@ -592,6 +613,12 @@ public final class CompoundTag {
     public void putBoolean(String k, boolean v) {}
     public boolean getBoolean(String k) { return false; }
     public boolean contains(String k) { return false; }
+    public void putLong(String k, long v) {}
+    public long getLong(String k) { return 0L; }
+    public void putLongArray(String k, long[] v) {}
+    public long[] getLongArray(String k) { return new long[0]; }
+    public void putIntArray(String k, int[] v) {}
+    public int[] getIntArray(String k) { return new int[0]; }
 }
 ''',
     "net/minecraft/network/protocol/Packet.java": '''package net.minecraft.network.protocol;
@@ -632,6 +659,12 @@ public abstract class Level {
     public void addAlwaysVisibleParticle(ParticleOptions p, double x, double y, double z, double dx, double dy, double dz) {}
     public void playLocalSound(double x, double y, double z, SoundEvent s, SoundSource src, float vol, float pitch, boolean distanceDelay) {}
     public RandomSource getRandom() { return null; }
+    // Real: SignalGetter.hasNeighborSignal -> C; Level's interface chain includes SignalGetter.
+    public boolean hasNeighborSignal(BlockPos pos) { return false; }
+    public int getBestNeighborSignal(BlockPos pos) { return 0; }
+    public boolean hasSignal(BlockPos pos, net.minecraft.core.Direction side) { return false; }
+    public int getSignal(BlockPos pos, net.minecraft.core.Direction side) { return 0; }
+    public boolean isLoaded(BlockPos pos) { return true; }
     public List<Entity> getEntities(Entity except, AABB box, Predicate<? super Entity> filter) { return null; }
 }
 ''',
@@ -845,6 +878,11 @@ public class ParticleTypes {
     public static final SimpleParticleType SMOKE = null;
     public static final SimpleParticleType WHITE_SMOKE = null;
     public static final SimpleParticleType CAMPFIRE_COSY_SMOKE = null;
+    // Beam particles added in 1.2.0 (real obf names verified in client.txt).
+    public static final SimpleParticleType END_ROD = null;
+    public static final SimpleParticleType ELECTRIC_SPARK = null;
+    public static final SimpleParticleType SMALL_FLAME = null;
+    public static final SimpleParticleType DUST = null;
 }
 ''',
     "net/minecraft/world/phys/AABB.java": '''package net.minecraft.world.phys;
@@ -898,6 +936,8 @@ public class ItemEntity extends Entity {
 public class SoundEvents {
     public static final SoundEvent FIRECHARGE_USE = null;
     public static final SoundEvent BLAZE_BURN = null;
+    // Real: SoundEvents.LEVER_CLICK -> nU (client.txt), used by the control panel.
+    public static final SoundEvent LEVER_CLICK = null;
     public static final SoundEvent BLAZE_SHOOT = null;
     public static final SoundEvent BLAZE_AMBIENT = null;
     public static final SoundEvent FIRE_AMBIENT = null;

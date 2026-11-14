@@ -1,6 +1,7 @@
 package com.wanderingearth.registry;
 
 import com.wanderingearth.WanderingEarth;
+import com.wanderingearth.block.ControlPanelBlock;
 import com.wanderingearth.block.EngineBlock;
 import com.wanderingearth.block.ModBlock;
 import net.minecraft.world.level.block.Block;
@@ -18,6 +19,7 @@ public final class ModBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(WanderingEarth.MOD_ID);
     public static final List<DeferredBlock<Block>> ALL = new ArrayList<>();
     public static final List<DeferredBlock<Block>> ENGINE_BLOCKS = new ArrayList<>();
+    public static final List<DeferredBlock<Block>> PANEL_BLOCKS = new ArrayList<>();
     public static final Map<String, String> CATEGORY_OF = new LinkedHashMap<>();
 
     public static final DeferredBlock<Block> PLANETARY_ENGINE_CASING = reg("planetary_engine_casing", "engines", 0, "", 7.0f, 12.0f, false);
@@ -35,7 +37,7 @@ public final class ModBlocks {
     public static final DeferredBlock<Block> IGNITION_CORE = reg("ignition_core", "engines", 11, "", 7.0f, 12.0f, true);
     public static final DeferredBlock<Block> ENGINE_STATUS_MONITOR = reg("engine_status_monitor", "engines", 0, "engine", 7.0f, 12.0f, false);
     public static final DeferredBlock<Block> ENGINE_NUMBER_PLATE = reg("engine_number_plate", "engines", 0, "", 7.0f, 12.0f, false);
-    public static final DeferredBlock<Block> UNDERCITY_ENTRANCE = reg("undercity_entrance", "undercity", 0, "", 7.0f, 12.0f, false);
+    public static final DeferredBlock<Block> ENGINE_CONTROL_PANEL = reg("engine_control_panel", "engines", 4, "", 7.0f, 12.0f, false);    public static final DeferredBlock<Block> UNDERCITY_ENTRANCE = reg("undercity_entrance", "undercity", 0, "", 7.0f, 12.0f, false);
     public static final DeferredBlock<Block> UNDERCITY_BLAST_DOOR = reg("undercity_blast_door", "undercity", 0, "", 7.0f, 12.0f, false);
     public static final DeferredBlock<Block> UNDERCITY_HABITAT = reg("undercity_habitat", "undercity", 0, "", 7.0f, 12.0f, false);
     public static final DeferredBlock<Block> CAPSULE_APARTMENT = reg("capsule_apartment", "undercity", 0, "", 5.0f, 8.0f, false);
@@ -117,13 +119,18 @@ public final class ModBlocks {
                 .sound(SoundType.METAL).strength(strength, resistance);
         final BlockBehaviour.Properties p = light > 0 ? base.lightLevel(s -> light) : base;
         final String n = name, k = kind;
+        final boolean panel = "engine_control_panel".equals(name);
         Supplier<Block> sup = engine
                 ? () -> new EngineBlock(p, n, k)
+                : panel ? () -> new ControlPanelBlock(p, n)
                 : () -> new ModBlock(p, n, k);
         DeferredBlock<Block> d = BLOCKS.<Block>register(name, sup);
         ALL.add(d);
         if (engine) {
             ENGINE_BLOCKS.add(d);
+        }
+        if (panel) {
+            PANEL_BLOCKS.add(d);
         }
         CATEGORY_OF.put(name, cat);
         return d;

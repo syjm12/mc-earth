@@ -1,6 +1,7 @@
 package com.wanderingearth.registry;
 
 import com.wanderingearth.WanderingEarth;
+import com.wanderingearth.block.ModControlPanelBlockEntity;
 import com.wanderingearth.block.ModEngineBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
@@ -31,6 +32,15 @@ public final class ModBlockEntities {
         // resolved blocks first -- by the time this supplier runs, the block
         // registry has already been filled in, so get() is safe here.
         return ModBlocks.ENGINE_BLOCKS.stream().map(block -> (Block) block.get()).toArray(Block[]::new);
+    }
+
+    /** Backing type for the engine control panel. */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ModControlPanelBlockEntity>> PANEL =
+            BLOCK_ENTITIES.register("control_panel",
+                    () -> BlockEntityType.Builder.of(ModControlPanelBlockEntity::new, panelBlocks()).build(null));
+
+    private static Block[] panelBlocks() {
+        return ModBlocks.PANEL_BLOCKS.stream().map(block -> (Block) block.get()).toArray(Block[]::new);
     }
 
     private ModBlockEntities() {}

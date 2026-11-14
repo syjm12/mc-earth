@@ -9,7 +9,7 @@ A **Minecraft 1.21.1 / NeoForge** content mod themed around *The Wandering Earth
 
 ## What's inside
 
-89 blocks + 39 items across eight authentic categories:
+90 blocks + 39 items across eight authentic categories:
 
 | Category | 内容 | Examples |
 |---|---|---|
@@ -34,14 +34,18 @@ a client-side flame effect:
 | Feature | How it works |
 |---|---|
 | **Turns** | `facing` property (4 directions). Place it and it faces you; **sneak + empty-hand right-click** rotates the nozzle a quarter turn, and the blockstate/model follows (per-facing `y` rotation). |
-| **Burns fuel** | A `BlockEntity` (`ModEngineBlockEntity`) stores fuel in NBT (`Fuel` / `BurnTimer`). Each burning tick consumes 1 lighter stone per 40 ticks and keeps `lit=true`, which swaps in the brighter `_front_lit` model. When fuel runs out the engine extinguishes itself. |
-| **Emits flame** | `Block.animateTick` sprays `ParticleTypes.FLAME` / `LARGE_SMOKE` out of the nozzle along `facing`, with a low `FIRE_AMBIENT` sound, and only while `lit=true`. |
+| **Burns fuel** | A `BlockEntity` (`ModEngineBlockEntity`) stores fuel in NBT (`Fuel` / `BurnTimer`). One lighter stone burns for **400 ticks (20 s)**; while burning it keeps `lit=true`, which swaps in the brighter `_front_lit` model. When fuel runs out the engine extinguishes itself. |
+| **Needs redstone** | Loading a lighter is not enough: the engine only fires while it receives a **redstone signal** (direct neighbour signal, or a remote link pushed by a Control Panel). Without a signal it sits loaded and cold, which is what makes the panels worth building. |
+| **Fires a beam** | `Block.animateTick` sprays `ParticleTypes.END_ROD` (plus every third step `ELECTRIC_SPARK`) out of the nozzle along `facing`, probing up to `BEAM_LENGTH = 12` blocks and stopping at the first solid block. The muzzle also emits `SMALL_FLAME`, with a `BLAZE_SHOOT` report. |
 | **Loads lighter stones itself** | Right-click with a **Lighter Stone** to insert one. Separately, every second the engine scans a 3-block box for dropped `ItemEntity` lighter stones and pulls them in automatically. |
+| **Control Panel** | `engine_control_panel` is a machine block with its own `BlockEntity`. It scans a **8 / 16 / 32 block radius** for engines (sneak + right-click cycles the radius), remembers up to 256 of them in NBT, and pushes its own redstone state to all of them — so one lever fires a whole engine farm. |
 | **Ponder** | With Create installed, `com.wanderingearth.compat.WanderingEarthPonder` registers three Create **Ponder** scenes (hold **W** over the item to open the animated explanation). It is loaded reflectively, so the mod still works, with zero `net.createmod.*` references, when Create is absent. |
 
 The other interactive blocks keep their flavour lines: the **undercity lottery**,
 the **countdown display**, **MOSS**, the **traffic notice**, the **UEG alert**
-and Zhou's **ignition button**.
+and Zhou's **ignition button**. `engine_control_panel` is fully mechanical: it
+scans 8/16/32 blocks for engines, stores up to 256 of them in NBT, and pushes
+its own redstone state to all of them, so one lever fires a whole array.
 
 Each Ponder scene is backed by a real structure file
 (`assets/wandering_earth/ponder/<scene>.nbt`): a 5x5 stone-brick platform with the
@@ -53,6 +57,38 @@ standalone. Optional `create:crushing` / `create:pressing` recipes are also
 included and activate when Create is installed. In `neoforge.mods.toml`,
 `create` and `aeronautics` are declared as *optional* dependencies so it loads
 both with and without them (thematically it is a Create Aeronautics addon).
+
+## The movie map
+
+`map/流浪地球-电影还原/` is a finished **Minecraft 1.21.1 world save** that a small
+Python generator (`tools/mapgen/`) writes byte for byte — no in-game building, no
+world-edit mods. It contains, on a 192×192 snowfield with the sky buried at
+y = -21:
+
+| Landmark | Where |
+|---|---|
+| **Planetary engine** | (96, ·, 96), 200 blocks tall: stepped plinth, tapered casing, cooling rings, `heavy_fusion_reactor` core, plasma nozzle, `engine_light_pillar` with an `end_rod` beam column to build limit, four ignition stations and a control deck with three `engine_control_panel`s. |
+| **Undercity** | Underneath it at y ≈ -51: habitat hall, three floors of capsule apartments, hibernation pods, eco-cycle units, ration dispensers, the lottery terminal, a Beijing-3 district sign, artificial sun lamps, UEG flag and emblem, a southern blast-door corridor, and the 550W room with the MOSS mainframe and the human-in-the-loop port. |
+| **Space elevator** | (152, ·, 96): base legs, rail, carbon-nanotube cable climbing 230 blocks, a cabin part-way up, counterweight, ark station, seed vault, Gagarin plaque, four defence turrets and eighteen wreckage pieces. |
+| **Surface life** | Ice road, UEG checkpoint, a six-`heavy_hauler` convoy, the CN171-11 trench, a command bunker with Zhou's ignition button and the over-fifty roster, a Jupiter observation post, a magma fissure and two ruined engine silhouettes on the horizon. |
+
+Regenerate it (or resize/edit and rebuild) with:
+
+```
+cd tools/mapgen
+python build_map.py
+```
+
+It writes `map/流浪地球-电影还原/` (a `level.dat` + one `region/r.0.0.mca`).
+Drop that folder into `.minecraft/saves/`. The generator uses only the standard
+library — `nbt.py` is a self-contained NBT reader/writer and `anvil.py` writes
+the 1.21.1 Anvil format (DataVersion 3955, 24 sections, packed palette longs,
+sky/block light arrays).
+
+Scope, stated honestly: this is a **thematic reconstruction at Minecraft scale**,
+not a survey-accurate replica. A 11 000-block engine would be 11 km tall, which
+no save can hold; the engine here is 200 blocks, the elevator 230. Layout, the
+order of the set pieces and the props follow the films; distances do not.
 
 ## Building
 
@@ -71,7 +107,7 @@ The Gradle wrapper here points at a Tencent mirror for the Gradle distribution.
 On networks where `maven.neoforged.net` is unreachable, a full ModDevGradle build
 cannot run (NeoForm Runtime `net.neoforged:neoform-runtime:2.0.31` is not
 mirrored). This repository therefore also ships an **offline-compiled jar**:
-`prebuilt/wandering_earth-1.1.1.jar`. It was produced by compiling the exact
+`prebuilt/wandering_earth-1.2.0.jar`. It was produced by compiling the exact
 same `src/main/java` sources against the real NeoForge 1.21.1 API jars plus
 compile-time-only `net.minecraft.*` signature stubs (verified against Mojang's
 official 1.21.1 mappings). The stubs are **not** shipped inside the jar — at
@@ -92,7 +128,7 @@ See `tools/build_offline.py` for the reproducible offline build, and
 > override descriptors, and that no stub leaked into the jar. Run it with:
 >
 > ```
-> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.1.1.jar \
+> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.2.0.jar \
 >     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>
 > ```
 >

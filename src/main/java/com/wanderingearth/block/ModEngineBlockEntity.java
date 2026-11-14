@@ -17,28 +17,29 @@ import java.util.List;
 /**
  * Persistent state for the planetary engine family.
  *
- * <p>Holds the lighter stone fuel load, the burn timer and the auto-load
- * cooldown, and absorbs dropped {@code lighter_stone} items that land within
- * three blocks of the engine (that is the "automatically loaded with a lighter
- * stone" behaviour). Everything is stored in NBT, so the load survives a
- * world reload.
+ * <p>Holds the lighter stone fuel load, the burn timer, the auto-load cooldown
+ * and the remote-power flag that a {@link ControlPanelBlock} pushes in. Dropped
+ * {@code lighter_stone} items within three blocks are absorbed automatically.
+ * Everything is stored in NBT, so the load survives a world reload.
  *
- * <p>All values written here match the official 1.21.1 signatures
- * ({@code saveAdditional}/{@code loadAdditional} take a
- * {@link HolderLookup.Provider}).
+ * <p>Firing is driven by redstone, not by loading: {@link #serverTick} computes
+ * {@code powered = hasNeighborSignal || remotePower} and mirrors it into
+ * {@link EngineBlock#LIT}. While unpowered nothing burns.
  */
 public class ModEngineBlockEntity extends BlockEntity {
 
     /** Upper bound of lighter stones one engine block can hold. */
     public static final int MAX_FUEL = 64;
-    /** Ticks one lighter stone burns for. */
-    public static final int BURN_TICKS = 40;
+    /** Ticks one lighter stone burns for: 400 ticks = 20 seconds. */
+    public static final int BURN_TICKS = 400;
     /** Ticks between two automatic pick-up attempts. */
     public static final int AUTO_LOAD_INTERVAL = 20;
 
     private int fuel;
     private int burnTimer;
     private int autoLoadTimer;
+    /** Set by a control panel: this engine should fire even without a local signal. */
+    private boolean remotePower;
 
     public ModEngineBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ENGINE.get(), pos, state);
@@ -57,13 +58,16 @@ public class ModEngineBlockEntity extends BlockEntity {
             engine.tryAbsorbLighter(level, pos);
         }
 
-        if (!state.getValue(EngineBlock.LIT)) {
+        // Redstone decides whether the engine burns at all.
+        boolean powered = level.hasNeighborSignal(pos) || engine.remotePower;
+        boolean wantLit = powered && engine.fuel > 0;
+        if (state.getValue(EngineBlock.LIT) != wantLit) {
+            level.setBlockAndUpdate(pos, state.setValue(EngineBlock.LIT, wantLit));
+        }
+        if (!wantLit) {
             return;
         }
-        if (engine.fuel <= 0) {
-            level.setBlockAndUpdate(pos, state.setValue(EngineBlock.LIT, false));
-            return;
-        }
+
         engine.burnTimer++;
         if (engine.burnTimer >= BURN_TICKS) {
             engine.burnTimer = 0;
@@ -122,11 +126,25 @@ public class ModEngineBlockEntity extends BlockEntity {
         return fuel > 0;
     }
 
+    /** Called by a control panel when its own redstone state changes. */
+    public void setRemotePower(boolean powered) {
+        if (remotePower == powered) {
+            return;
+        }
+        remotePower = powered;
+        setChanged();
+    }
+
+    public boolean hasRemotePower() {
+        return remotePower;
+    }
+
     @Override
     public void saveAdditional(CompoundTag tag, HolderLookup.Provider provider) {
         super.saveAdditional(tag, provider);
         tag.putInt("Fuel", fuel);
         tag.putInt("BurnTimer", burnTimer);
+        tag.putBoolean("RemotePower", remotePower);
     }
 
     @Override
@@ -134,5 +152,6 @@ public class ModEngineBlockEntity extends BlockEntity {
         super.loadAdditional(tag, provider);
         fuel = tag.getInt("Fuel");
         burnTimer = tag.getInt("BurnTimer");
+        remotePower = tag.getBoolean("RemotePower");
     }
 }
