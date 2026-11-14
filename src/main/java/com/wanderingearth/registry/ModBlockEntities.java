@@ -26,7 +26,11 @@ public final class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(ModEngineBlockEntity::new, engineBlocks()).build(null));
 
     private static Block[] engineBlocks() {
-        return ModBlocks.ENGINE_BLOCKS.toArray(new Block[0]);
+        // ENGINE_BLOCKS holds DeferredBlock<Block>, not Block: toArray(new Block[0])
+        // throws ArrayStoreException at runtime (it did in 1.1.0). Map to the
+        // resolved blocks first -- by the time this supplier runs, the block
+        // registry has already been filled in, so get() is safe here.
+        return ModBlocks.ENGINE_BLOCKS.stream().map(block -> (Block) block.get()).toArray(Block[]::new);
     }
 
     private ModBlockEntities() {}

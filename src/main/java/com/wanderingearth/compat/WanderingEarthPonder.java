@@ -67,7 +67,7 @@ public final class WanderingEarthPonder implements PonderPlugin {
         scene.idle(80);
 
         // Light it: flip lit=false -> lit=true and spit flame out of the nozzle.
-        scene.world().cycleBlockProperty(engine, net.minecraft.world.level.block.state.BlockStateProperties.LIT);
+        scene.world().cycleBlockProperty(engine, net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT);
         Vec3 front = util.vector().topOf(2, 1, 2);
         scene.effects().emitParticles(front,
                 scene.effects().simpleParticleEmitter(ParticleTypes.FLAME, front), 1.0f, 60);

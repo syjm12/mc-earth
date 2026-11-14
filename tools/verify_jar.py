@@ -300,6 +300,11 @@ STATIC_FIELD_OPS = {0xB2, 0xB3}
 FIELD_NAMES = {0xB2: "getstatic", 0xB3: "putstatic",
                0xB4: "getfield", 0xB5: "putfield"}
 
+# Owner prefixes that MUST resolve to a real Minecraft class. Anything under
+# these that we cannot find is a phantom type -- a wrong package path that
+# compiled cleanly and will throw NoClassDefFoundError at runtime.
+MC_PREFIXES = ("net.minecraft.",)
+
 
 # ---------------------------------------------------------------- world view
 class World:
@@ -442,6 +447,7 @@ def main(argv=None):
 
     problems = []
     checked_invokes = checked_members = checked_overrides = checked_fields = 0
+    checked_types = 0
 
     print("\nchecking %d mod classes ..." % len(own))
     for rel, raw in sorted(own.items()):
@@ -468,7 +474,18 @@ def main(argv=None):
                 ref_name = cf.name(nat[1][0])
                 ref_desc = cf.name(nat[1][1])
                 if world.locate(owner)[0] is None:
-                    continue        # our own class or a JDK type
+                    # Unresolvable. That is normal for our own classes and for
+                    # JDK types, but a *phantom* Minecraft type here means the
+                    # source named a package that does not exist -- e.g.
+                    # net.minecraft.world.level.block.state.BlockStateProperties
+                    # instead of ...state.properties.BlockStateProperties.
+                    # That compiles fine and then dies at runtime with
+                    # NoClassDefFoundError, which is exactly how 1.1.0 shipped
+                    # a broken build. Flag it.
+                    if owner.startswith(MC_PREFIXES) and owner not in world.map.deobf_to_obf:
+                        checked_types += 1
+                        problems.append(("UNKNOWN_TYPE", rel, mname, off, owner))
+                    continue
                 entry = world.entry(owner)
                 if entry is None:
                     continue
@@ -516,13 +533,36 @@ def main(argv=None):
                                      "descriptor %s never matches %s in %s; real: %s"
                                      % (mdesc, mname, sup, sorted(real_methods[mname]))))
 
+    # --- 3b: phantom Minecraft types anywhere in the constant pool.
+    # The invoke-site check above only sees the *owner* of a method/field ref.
+    # A wrong package path can also sit in a descriptor, a field type, a catch
+    # type or a local-variable signature -- and then there is no invoke site to
+    # flag, yet the class still dies with NoClassDefFoundError on load. Every
+    # referenced type shows up as a CONSTANT_Class entry, so scan those.
+    phantom = set()
+    for rel, raw in sorted(own.items()):
+        cf = ClassFile(raw)
+        for e in cf.cp:
+            if not e or e[0] != 7:
+                continue
+            nm = cf.name(e[1])
+            if not nm or nm.startswith("["):
+                continue
+            dotted = nm.replace("/", ".")
+            if dotted.startswith(MC_PREFIXES) and dotted not in world.map.deobf_to_obf:
+                phantom.add((rel, dotted))
+    checked_types += len(phantom)
+    for rel, dotted in sorted(phantom):
+        problems.append(("UNKNOWN_TYPE", rel, "(constant pool)", -1, dotted))
+
     # --- 4: stub leak
     for nm in leaks:
         problems.append(("STUB_LEAK", nm, "-", -1,
                          "compile-time stub shipped inside the jar"))
 
-    print("invoke sites: %d | member refs: %d | fields: %d | overrides: %d"
-          % (checked_invokes, checked_members, checked_fields, checked_overrides))
+    print("invoke sites: %d | member refs: %d | fields: %d | overrides: %d | phantom types: %d"
+          % (checked_invokes, checked_members, checked_fields, checked_overrides,
+             checked_types))
     print("PROBLEMS: %d" % len(problems))
     for kind, rel, mname, off, detail in problems:
         loc = "%s.%s" % (rel, mname) + ("+%d" % off if off >= 0 else "")

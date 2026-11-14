@@ -71,7 +71,7 @@ The Gradle wrapper here points at a Tencent mirror for the Gradle distribution.
 On networks where `maven.neoforged.net` is unreachable, a full ModDevGradle build
 cannot run (NeoForm Runtime `net.neoforged:neoform-runtime:2.0.31` is not
 mirrored). This repository therefore also ships an **offline-compiled jar**:
-`prebuilt/wandering_earth-1.1.0.jar`. It was produced by compiling the exact
+`prebuilt/wandering_earth-1.1.1.jar`. It was produced by compiling the exact
 same `src/main/java` sources against the real NeoForge 1.21.1 API jars plus
 compile-time-only `net.minecraft.*` signature stubs (verified against Mojang's
 official 1.21.1 mappings). The stubs are **not** shipped inside the jar — at
@@ -92,24 +92,12 @@ See `tools/build_offline.py` for the reproducible offline build, and
 > override descriptors, and that no stub leaked into the jar. Run it with:
 >
 > ```
-> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.1.0.jar \
+> python tools/verify_jar.py --jar prebuilt/wandering_earth-1.1.1.jar \
 >     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>
 > ```
 >
 > It reproduces the v1.0.0 crash on the old jar and reports 0 problems on this
 > one.
-
-See `tools/verify_resources.py` for the other half: it walks the declared
-resource graph inside the jar — every `blockstates` variant to its model, the
-model `parent` chain, every `textures` reference, and every item named by a loot
-table or recipe — resolving vanilla targets against a real 1.21.1 `client.jar`.
-A mistyped `minecraft:block/oreintable` or a dropped texture is caught there
-instead of showing up in game as a purple model. Point it at the jar the same way:
-
-```
-python tools/verify_resources.py --jar prebuilt/wandering_earth-1.1.0.jar \\
-    --vanilla client.jar
-```
 
 ## Install
 

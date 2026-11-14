@@ -33,7 +33,7 @@ JAVAC = os.path.join(JDK, "bin", "javac")
 JAR = os.path.join(JDK, "bin", "jar")
 
 MOD_ID = "wandering_earth"
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 # ---------------------------------------------------------------------------
 # compile-time-only stub sources
@@ -513,9 +513,12 @@ public class DirectionProperty extends EnumProperty<Direction> {
     public static DirectionProperty create(String name, java.util.function.Predicate<Direction> filter) { return null; }
 }
 ''',
-    "net/minecraft/world/level/block/state/BlockStateProperties.java": '''package net.minecraft.world.level.block.state;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+    # Real FQN verified from client.txt:110000 --
+    # "net.minecraft.world.level.block.state.properties.BlockStateProperties -> dts:"
+    # The package is block.state.properties, NOT block.state. Getting this wrong
+    # compiles fine and then dies at runtime with NoClassDefFoundError inside
+    # EngineBlock.<clinit> (that is exactly what shipped in 1.1.0).
+    "net/minecraft/world/level/block/state/properties/BlockStateProperties.java": '''package net.minecraft.world.level.block.state.properties;
 public class BlockStateProperties {
     public static final BooleanProperty LIT = null;
     public static final BooleanProperty POWERED = null;
