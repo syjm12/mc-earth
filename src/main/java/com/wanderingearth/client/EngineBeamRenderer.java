@@ -69,11 +69,17 @@ public class EngineBeamRenderer implements BlockEntityRenderer {
                 NOZZLE_HEIGHT,
                 0.5D + facing.getStepZ() * NOZZLE_OFFSET);
 
+        // The pose carries every translation applied so far: the level renderer's
+        // block-to-camera offset plus our nozzle offset. addVertex(pose, ...) bakes
+        // that matrix into each vertex; the plain addVertex(float,float,float)
+        // overload does NOT and would leave the shaft stuck at the camera origin.
+        PoseStack.Pose pose = poseStack.last();
+
         VertexConsumer core = bufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, false));
-        drawShaft(core, facing, length, CORE_RADIUS, CORE_COLOR);
+        drawShaft(core, pose, facing, length, CORE_RADIUS, CORE_COLOR);
 
         VertexConsumer glow = bufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, true));
-        drawShaft(glow, facing, length, GLOW_RADIUS, GLOW_COLOR);
+        drawShaft(glow, pose, facing, length, GLOW_RADIUS, GLOW_COLOR);
 
         poseStack.popPose();
     }
@@ -104,7 +110,8 @@ public class EngineBeamRenderer implements BlockEntityRenderer {
      * twice, once in each winding order, so the beam is visible from any angle no
      * matter how the beacon beam render type handles culling.
      */
-    private void drawShaft(VertexConsumer consumer, Direction facing, int length, float radius, int argb) {
+    private void drawShaft(VertexConsumer consumer, PoseStack.Pose pose, Direction facing,
+                           int length, float radius, int argb) {
         double dx = facing.getStepX();
         double dz = facing.getStepZ();
 
@@ -131,26 +138,26 @@ public class EngineBeamRenderer implements BlockEntityRenderer {
             float u1 = 0.25F;
             float u2 = 0.75F;
 
-            vertex(consumer, cornerX[side], cornerY[side], cornerZ[side], u1, 0.0F, normalX, normalY, normalZ, argb);
-            vertex(consumer, cornerX[next], cornerY[next], cornerZ[next], u2, 0.0F, normalX, normalY, normalZ, argb);
-            vertex(consumer, endX + cornerX[next], cornerY[next], endZ + cornerZ[next], u2, 1.0F, normalX, normalY, normalZ, argb);
-            vertex(consumer, endX + cornerX[side], cornerY[side], endZ + cornerZ[side], u1, 1.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, cornerX[side], cornerY[side], cornerZ[side], u1, 0.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, cornerX[next], cornerY[next], cornerZ[next], u2, 0.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, endX + cornerX[next], cornerY[next], endZ + cornerZ[next], u2, 1.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, endX + cornerX[side], cornerY[side], endZ + cornerZ[side], u1, 1.0F, normalX, normalY, normalZ, argb);
 
             // Same quad with the opposite winding.
-            vertex(consumer, endX + cornerX[side], cornerY[side], endZ + cornerZ[side], u1, 1.0F, normalX, normalY, normalZ, argb);
-            vertex(consumer, endX + cornerX[next], cornerY[next], endZ + cornerZ[next], u2, 1.0F, normalX, normalY, normalZ, argb);
-            vertex(consumer, cornerX[next], cornerY[next], cornerZ[next], u2, 0.0F, normalX, normalY, normalZ, argb);
-            vertex(consumer, cornerX[side], cornerY[side], cornerZ[side], u1, 0.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, endX + cornerX[side], cornerY[side], endZ + cornerZ[side], u1, 1.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, endX + cornerX[next], cornerY[next], endZ + cornerZ[next], u2, 1.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, cornerX[next], cornerY[next], cornerZ[next], u2, 0.0F, normalX, normalY, normalZ, argb);
+            vertex(consumer, pose, cornerX[side], cornerY[side], cornerZ[side], u1, 0.0F, normalX, normalY, normalZ, argb);
         }
     }
 
-    private void vertex(VertexConsumer consumer, double x, double y, double z,
+    private void vertex(VertexConsumer consumer, PoseStack.Pose pose, double x, double y, double z,
                         float u, float v, float normalX, float normalY, float normalZ, int argb) {
-        consumer.addVertex((float) x, (float) y, (float) z)
+        consumer.addVertex(pose, (float) x, (float) y, (float) z)
                 .setColor(argb)
                 .setUv(u, v)
                 .setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(15728880)
-                .setNormal(normalX, normalY, normalZ);
+                .setNormal(pose, normalX, normalY, normalZ);
     }
 }

@@ -224,6 +224,12 @@ What changed:
 * **It is frame perfect.** Because the geometry is built every frame instead of
   being sprayed as particles, the beam is perfectly straight and never
   flickers.
+* **It comes out of the block, not the camera.** Vertices are written through the
+  pose-aware `addVertex(PoseStack.Pose, ...)` overload (the same one vanilla
+  `BeaconRenderer` uses), which bakes the block-to-camera translation into each
+  vertex. Using the plain `addVertex(float,float,float)` overload would leave the
+  shaft at raw camera-space coordinates and make it appear to shoot out of the
+  player's viewpoint.
 * **It reaches further.** `BEAM_LENGTH` went from 12 to **32** blocks.
 * The muzzle still spits `SMALL_FLAME` and now hums with `BEACON_AMBIENT`
   instead of `BLAZE_SHOOT`.
@@ -237,7 +243,7 @@ match the real classes exactly. The real `org.joml` jar is used for
 `Quaternionf`. `tools/verify_jar.py` checks the result:
 
 ```
-invoke sites: 387 | member refs: 444 | fields: 57 | overrides: 19 | phantom types: 0
+invoke sites: 388 | member refs: 445 | fields: 57 | overrides: 19 | phantom types: 0
 PROBLEMS: 0
 ```
 

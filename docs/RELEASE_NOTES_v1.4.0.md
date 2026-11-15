@@ -28,6 +28,15 @@ the old beam looked like: a stuttering line of sparks.
 * The beam is emitted from the **nozzle**, not from the block centre: the block
   entity renderer starts at the minimum corner of the block, so the renderer
   translates to `(0.5 + facingX * 0.62, 0.45, 0.5 + facingZ * 0.62)`.
+* **v1.4.0 fix (post-release):** the vertices are written with
+  `addVertex(PoseStack.Pose, float, float, float)` and
+  `setNormal(PoseStack.Pose, float, float, float)`, i.e. the pose-aware
+  overloads that vanilla `BeaconRenderer` itself uses. Those overloads bake the
+  accumulated `Matrix4f` (the level renderer's block-to-camera translation plus
+  our nozzle translation) into each vertex. The plain `addVertex(float,float,float)`
+  overload does **not** apply the pose matrix, so with it the shaft was drawn at
+  raw camera-space coordinates and appeared to shoot out of the player's viewpoint
+  instead of out of the engine block.
 * The beam stops at the first solid block, exactly like the particle version
   did, and reaches **`BEAM_LENGTH = 32`** blocks (it was 12).
 * `Block.animateTick` now only handles the muzzle: two `SMALL_FLAME` particles
@@ -82,11 +91,11 @@ mod's own classes.
 python tools/build_offline.py
   classpath jars: 11 | stub files: 80 | real sources: 13
   javac OK
-  jar OK: build/libs/wandering_earth-1.4.0.jar (585525 bytes)
+  jar OK: build/libs/wandering_earth-1.4.0.jar (585605 bytes)
 
 python tools/verify_jar.py --jar build/libs/wandering_earth-1.4.0.jar \
     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>
-  invoke sites: 387 | member refs: 444 | fields: 57 | overrides: 19 | phantom types: 0
+  invoke sites: 388 | member refs: 445 | fields: 57 | overrides: 19 | phantom types: 0
   PROBLEMS: 0
 
 python tools/verify_resources.py --jar build/libs/wandering_earth-1.4.0.jar --vanilla client.jar

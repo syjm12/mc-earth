@@ -985,6 +985,7 @@ public interface VertexConsumer {
     VertexConsumer setLight(int light);
     VertexConsumer setOverlay(int overlay);
     VertexConsumer setNormal(float x, float y, float z);
+    VertexConsumer setNormal(PoseStack.Pose pose, float x, float y, float z);
 }
 ''',
     "net/minecraft/client/renderer/RenderType.java": '''package net.minecraft.client.renderer;
