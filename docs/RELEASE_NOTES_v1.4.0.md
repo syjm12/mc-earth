@@ -37,6 +37,15 @@ the old beam looked like: a stuttering line of sparks.
   overload does **not** apply the pose matrix, so with it the shaft was drawn at
   raw camera-space coordinates and appeared to shoot out of the player's viewpoint
   instead of out of the engine block.
+* **v1.4.0 fix (axial viewing):** the renderer overrides
+  `shouldRenderOffScreen()` → `true`, `getViewDistance()` → `256` and
+  `shouldRender(...)` → `true`, the same three values vanilla `BeaconRenderer`
+  uses. Without them, looking along the beam puts the engine block behind the
+  camera, the block entity is frustum-culled using its 1x1x1 bounding box, and
+  the entire beam vanishes. The shaft is now also capped at both ends: when the
+  camera is exactly on the beam axis the four side walls are edge-on and collapse
+  to a line, so the two cross-section quads keep it visible as a solid square and
+  give the far end a visible head.
 * The beam stops at the first solid block, exactly like the particle version
   did, and reaches **`BEAM_LENGTH = 32`** blocks (it was 12).
 * `Block.animateTick` now only handles the muzzle: two `SMALL_FLAME` particles
@@ -91,7 +100,7 @@ mod's own classes.
 python tools/build_offline.py
   classpath jars: 11 | stub files: 80 | real sources: 13
   javac OK
-  jar OK: build/libs/wandering_earth-1.4.0.jar (585605 bytes)
+  jar OK: build/libs/wandering_earth-1.4.0.jar (585870 bytes)
 
 python tools/verify_jar.py --jar build/libs/wandering_earth-1.4.0.jar \
     --mappings client.txt --vanilla client.jar --cp-dir <neoforge-jars>

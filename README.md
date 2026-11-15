@@ -230,6 +230,12 @@ What changed:
   vertex. Using the plain `addVertex(float,float,float)` overload would leave the
   shaft at raw camera-space coordinates and make it appear to shoot out of the
   player's viewpoint.
+* **It stays visible when you look straight down it.** The renderer overrides
+  `shouldRenderOffScreen()` / `getViewDistance()` / `shouldRender(...)` with the
+  values vanilla `BeaconRenderer` uses (`true` / `256` / `true`), so the engine
+  block is not frustum-culled when it sits behind the camera, and both ends of
+  the tube are capped so the four side walls being edge-on cannot collapse the
+  shaft to an invisible line.
 * **It reaches further.** `BEAM_LENGTH` went from 12 to **32** blocks.
 * The muzzle still spits `SMALL_FLAME` and now hums with `BEACON_AMBIENT`
   instead of `BLAZE_SHOOT`.

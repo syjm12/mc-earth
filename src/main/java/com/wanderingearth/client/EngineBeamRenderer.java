@@ -15,6 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Draws the plasma beam of a planetary engine the way a vanilla beacon draws its
@@ -85,6 +86,28 @@ public class EngineBeamRenderer implements BlockEntityRenderer {
     }
 
     /**
+     * The shaft reaches up to {@link EngineBlock#BEAM_LENGTH} blocks away from the
+     * block, so the engine's own 1x1x1 bounding box is a poor culling proxy. Vanilla
+     * BeaconRenderer returns {@code true} / {@code 256} for exactly this reason:
+     * without it, looking along the beam puts the engine block behind the camera,
+     * the block entity is frustum-culled, and the whole beam disappears.
+     */
+    @Override
+    public boolean shouldRenderOffScreen(BlockEntity blockEntity) {
+        return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return 256;
+    }
+
+    @Override
+    public boolean shouldRender(BlockEntity blockEntity, Vec3 camera) {
+        return true;
+    }
+
+    /**
      * Walks along the facing axis until something solid stops the beam, exactly
      * like the particle beam of 1.3.0 did.
      */
@@ -149,6 +172,23 @@ public class EngineBeamRenderer implements BlockEntityRenderer {
             vertex(consumer, pose, cornerX[next], cornerY[next], cornerZ[next], u2, 0.0F, normalX, normalY, normalZ, argb);
             vertex(consumer, pose, cornerX[side], cornerY[side], cornerZ[side], u1, 0.0F, normalX, normalY, normalZ, argb);
         }
+
+        // Cap both ends of the tube. When the camera looks straight down the
+        // beam axis the four side walls are edge-on and collapse to a line; these
+        // two cross-section quads keep the shaft visible as a solid square and
+        // give the beam a visible "head" at its far end.
+        float nx = (float) dx;
+        float ny = 0.0F;
+        float nz = (float) dz;
+        vertex(consumer, pose, cornerX[0], cornerY[0], cornerZ[0], 0.25F, 0.25F, -nx, ny, -nz, argb);
+        vertex(consumer, pose, cornerX[1], cornerY[1], cornerZ[1], 0.75F, 0.25F, -nx, ny, -nz, argb);
+        vertex(consumer, pose, cornerX[2], cornerY[2], cornerZ[2], 0.75F, 0.75F, -nx, ny, -nz, argb);
+        vertex(consumer, pose, cornerX[3], cornerY[3], cornerZ[3], 0.25F, 0.75F, -nx, ny, -nz, argb);
+
+        vertex(consumer, pose, endX + cornerX[3], cornerY[3], endZ + cornerZ[3], 0.25F, 0.75F, nx, ny, nz, argb);
+        vertex(consumer, pose, endX + cornerX[2], cornerY[2], endZ + cornerZ[2], 0.75F, 0.75F, nx, ny, nz, argb);
+        vertex(consumer, pose, endX + cornerX[1], cornerY[1], endZ + cornerZ[1], 0.75F, 0.25F, nx, ny, nz, argb);
+        vertex(consumer, pose, endX + cornerX[0], cornerY[0], endZ + cornerZ[0], 0.25F, 0.25F, nx, ny, nz, argb);
     }
 
     private void vertex(VertexConsumer consumer, PoseStack.Pose pose, double x, double y, double z,
